@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -37,7 +38,7 @@ export default function SignupScreen() {
 
   async function handleSignup() {
     if (!email || !password || !firstName) {
-      Alert.alert("Missing info", "Please fill in all required fields.");
+      Alert.alert("Missing info", "Please fill in your first name, email, and password.");
       return;
     }
     if (password.length < 8) {
@@ -56,11 +57,24 @@ export default function SignupScreen() {
     }
   }
 
+  function handleGoogleSignup() {
+    Alert.alert(
+      "Google Sign-In",
+      "Google sign-in requires connecting your Google account. Please ask your family member to help set this up, or use the email option below.",
+      [{ text: "OK" }]
+    );
+  }
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 },
+      ]}
       keyboardShouldPersistTaps="handled"
+      horizontal={false}
+      showsHorizontalScrollIndicator={false}
     >
       <Pressable onPress={() => router.back()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -68,17 +82,42 @@ export default function SignupScreen() {
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.text }]}>Create your account</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Join thousands of protected seniors</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+          Join thousands of protected seniors
+        </Text>
       </View>
 
       <View style={styles.form}>
+        <Pressable
+          onPress={handleGoogleSignup}
+          style={({ pressed }) => [
+            styles.googleButton,
+            { backgroundColor: theme.card, borderColor: theme.border },
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.googleIcon}>
+            <Text style={styles.googleG}>G</Text>
+          </View>
+          <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+        </Pressable>
+
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+          <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or sign up with email</Text>
+          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+        </View>
+
         <View style={styles.field}>
           <Text style={[styles.label, { color: theme.text }]}>I am a</Text>
           <View style={styles.typeSelector}>
             {USER_TYPES.map(type => (
               <Pressable
                 key={type.value}
-                onPress={() => setUserType(type.value)}
+                onPress={() => {
+                  setUserType(type.value);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
                 style={[
                   styles.typeOption,
                   { backgroundColor: theme.inputBackground, borderColor: theme.border },
@@ -104,39 +143,42 @@ export default function SignupScreen() {
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: theme.text }]}>First Name</Text>
-            <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-              <TextInput
-                style={[styles.textInput, { color: theme.text }]}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Jane"
-                placeholderTextColor={theme.placeholder}
-                autoCapitalize="words"
-              />
-            </View>
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: theme.text }]}>First Name</Text>
+          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+            <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
+            <TextInput
+              style={[styles.textInput, { color: theme.text }]}
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Jane"
+              placeholderTextColor={theme.placeholder}
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
           </View>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: theme.text }]}>Last Name</Text>
-            <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-              <TextInput
-                style={[styles.textInput, { color: theme.text }]}
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Smith"
-                placeholderTextColor={theme.placeholder}
-                autoCapitalize="words"
-              />
-            </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: theme.text }]}>Last Name <Text style={[styles.optional, { color: theme.textTertiary }]}>(optional)</Text></Text>
+          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
+            <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
+            <TextInput
+              style={[styles.textInput, { color: theme.text }]}
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Smith"
+              placeholderTextColor={theme.placeholder}
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
           </View>
         </View>
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
           <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
+            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} />
             <TextInput
               style={[styles.textInput, { color: theme.text }]}
               value={email}
@@ -145,6 +187,8 @@ export default function SignupScreen() {
               placeholderTextColor={theme.placeholder}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
             />
           </View>
         </View>
@@ -152,7 +196,7 @@ export default function SignupScreen() {
         <View style={styles.field}>
           <Text style={[styles.label, { color: theme.text }]}>Password</Text>
           <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} />
             <TextInput
               style={[styles.textInput, { color: theme.text }]}
               value={password}
@@ -161,15 +205,25 @@ export default function SignupScreen() {
               placeholderTextColor={theme.placeholder}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={handleSignup}
             />
             <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.textTertiary} />
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={theme.textTertiary}
+              />
             </Pressable>
           </View>
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.signupButton, pressed && styles.pressed, loading && styles.disabled]}
+          style={({ pressed }) => [
+            styles.signupButton,
+            pressed && styles.pressed,
+            loading && styles.disabled,
+          ]}
           onPress={handleSignup}
           disabled={loading}
         >
@@ -195,13 +249,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
   backButton: { width: 44, height: 44, justifyContent: "center" },
-  header: { marginTop: 16, marginBottom: 32 },
+  header: { marginTop: 16, marginBottom: 28 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", marginBottom: 8 },
   subtitle: { fontSize: 16, fontFamily: "Inter_400Regular" },
-  form: { gap: 20 },
+  form: { gap: 18 },
   field: { gap: 8 },
   label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  row: { flexDirection: "row", gap: 12 },
+  optional: { fontSize: 12, fontFamily: "Inter_400Regular" },
   typeSelector: { gap: 8 },
   typeOption: {
     flexDirection: "row",
@@ -227,15 +281,41 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 10,
   },
-  inputIcon: {},
-  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular" },
+  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
   eyeButton: { padding: 4 },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 16,
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleG: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+    lineHeight: 16,
+  },
+  googleButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   signupButton: {
     backgroundColor: "#2563EB",
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   signupButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

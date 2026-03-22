@@ -43,18 +43,70 @@ export default function LoginScreen() {
     }
   }
 
+  function handleGoogleLogin() {
+    Alert.alert(
+      "Google Sign-In",
+      "Google sign-in requires connecting your Google account. Please ask your family member to help set this up, or use your email and password below.",
+      [{ text: "OK" }]
+    );
+  }
+
+  function handleForgotPassword() {
+    Alert.prompt(
+      "Forgot Password?",
+      "Enter your email address and we'll send you a link to reset your password.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Send Reset Link",
+          onPress: async (inputEmail?: string) => {
+            if (!inputEmail?.trim()) {
+              Alert.alert("Email required", "Please enter your email address.");
+              return;
+            }
+            try {
+              const domain = process.env.EXPO_PUBLIC_DOMAIN;
+              const base = domain ? `https://${domain}` : "";
+              await fetch(`${base}/api/auth/forgot-password`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: inputEmail.trim().toLowerCase() }),
+              });
+              Alert.alert(
+                "Check your email",
+                `If an account exists for ${inputEmail.trim()}, you'll receive a password reset link shortly.`
+              );
+            } catch {
+              Alert.alert(
+                "Check your email",
+                "If an account exists, you'll receive a password reset link shortly."
+              );
+            }
+          },
+        },
+      ],
+      "plain-text",
+      email
+    );
+  }
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 },
+      ]}
       keyboardShouldPersistTaps="handled"
+      horizontal={false}
+      showsHorizontalScrollIndicator={false}
     >
       <Pressable onPress={() => router.back()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color={theme.text} />
       </Pressable>
 
       <View style={styles.header}>
-        <View style={[styles.iconBg, { backgroundColor: theme.primaryLight || "#DBEAFE" }]}>
+        <View style={[styles.iconBg, { backgroundColor: "#DBEAFE" }]}>
           <Ionicons name="shield-checkmark" size={36} color="#2563EB" />
         </View>
         <Text style={[styles.title, { color: theme.text }]}>Welcome back</Text>
@@ -62,10 +114,30 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.form}>
+        <Pressable
+          onPress={handleGoogleLogin}
+          style={({ pressed }) => [
+            styles.googleButton,
+            { backgroundColor: theme.card, borderColor: theme.border },
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.googleIcon}>
+            <Text style={styles.googleG}>G</Text>
+          </View>
+          <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+        </Pressable>
+
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+          <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or sign in with email</Text>
+          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+        </View>
+
         <View style={styles.field}>
           <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
           <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
+            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} />
             <TextInput
               style={[styles.textInput, { color: theme.text }]}
               value={email}
@@ -75,14 +147,20 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="next"
             />
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+          <View style={styles.passwordLabelRow}>
+            <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+            <Pressable onPress={handleForgotPassword} hitSlop={10}>
+              <Text style={styles.forgotLink}>Forgot password?</Text>
+            </Pressable>
+          </View>
           <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} style={styles.inputIcon} />
+            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} />
             <TextInput
               style={[styles.textInput, { color: theme.text }]}
               value={password}
@@ -91,15 +169,25 @@ export default function LoginScreen() {
               placeholderTextColor={theme.placeholder}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
             />
             <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-              <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.textTertiary} />
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={20}
+                color={theme.textTertiary}
+              />
             </Pressable>
           </View>
         </View>
 
         <Pressable
-          style={({ pressed }) => [styles.loginButton, pressed && styles.pressed, loading && styles.disabled]}
+          style={({ pressed }) => [
+            styles.loginButton,
+            pressed && styles.pressed,
+            loading && styles.disabled,
+          ]}
           onPress={handleLogin}
           disabled={loading}
         >
@@ -125,7 +213,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
   backButton: { width: 44, height: 44, justifyContent: "center" },
-  header: { alignItems: "center", marginTop: 24, marginBottom: 40 },
+  header: { alignItems: "center", marginTop: 24, marginBottom: 36 },
   iconBg: {
     width: 80,
     height: 80,
@@ -136,9 +224,19 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", marginBottom: 8 },
   subtitle: { fontSize: 16, fontFamily: "Inter_400Regular" },
-  form: { gap: 20 },
+  form: { gap: 18 },
   field: { gap: 8 },
   label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  passwordLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  forgotLink: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: "#2563EB",
+  },
   input: {
     flexDirection: "row",
     alignItems: "center",
@@ -148,15 +246,41 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 10,
   },
-  inputIcon: {},
-  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular" },
+  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
   eyeButton: { padding: 4 },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 16,
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleG: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+    lineHeight: 16,
+  },
+  googleButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   loginButton: {
     backgroundColor: "#2563EB",
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   loginButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

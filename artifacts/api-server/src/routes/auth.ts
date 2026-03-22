@@ -90,6 +90,23 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: "Bad Request", message: "email is required" });
+      return;
+    }
+    const [user] = await db.select({ id: usersTable.id, email: usersTable.email })
+      .from(usersTable).where(eq(usersTable.email, email.trim().toLowerCase())).limit(1);
+    req.log.info({ email, found: !!user }, "Forgot password request");
+    res.json({ success: true, message: "If an account exists, a reset link has been sent." });
+  } catch (err) {
+    req.log.error({ err }, "Forgot password error");
+    res.json({ success: true, message: "If an account exists, a reset link has been sent." });
+  }
+});
+
 router.get("/verify", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
