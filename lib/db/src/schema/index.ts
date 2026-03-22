@@ -42,6 +42,8 @@ export const usersTable = pgTable("users", {
   microphone_access: boolean("microphone_access").default(true),
   onboarding_completed: boolean("onboarding_completed").default(false),
   onboarding_step: integer("onboarding_step").default(0),
+  email_verified: boolean("email_verified").default(false),
+  email_verification_token: varchar("email_verification_token"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
