@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { TEXT_SIZES, TextSizes } from "@/constants/textSizes";
 
 export const DEFAULT_NAMES: Record<string, string> = { female: "Aria", male: "Max" };
 
@@ -36,7 +37,7 @@ const DEFAULT_PREFS: Preferences = {
 interface PreferencesContextType {
   prefs: Preferences;
   loaded: boolean;
-  fontScale: number;
+  ts: TextSizes;
   updatePref: (key: keyof Preferences, value: any) => Promise<void>;
   reloadPrefs: () => Promise<void>;
 }
@@ -44,7 +45,7 @@ interface PreferencesContextType {
 const PreferencesContext = createContext<PreferencesContextType>({
   prefs: DEFAULT_PREFS,
   loaded: false,
-  fontScale: 1.15,
+  ts: TEXT_SIZES.large,
   updatePref: async () => {},
   reloadPrefs: async () => {},
 });
@@ -71,7 +72,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           voice_volume: parseFloat(data.voice_volume) || 0.8,
           color_scheme: data.color_scheme === "dark" ? "dark" : "light",
           high_contrast_enabled: !!data.high_contrast_enabled,
-          font_size: (["normal", "large", "extra_large"].includes(data.font_size) ? data.font_size : "large") as FontSize,
+          font_size: (["normal", "large", "extra_large"].includes(data.font_size)
+            ? data.font_size
+            : "large") as FontSize,
           haptic_feedback: data.haptic_feedback !== false,
           captions_enabled: data.captions_enabled !== false,
           data_collection_enabled: data.data_collection_enabled !== false,
@@ -105,10 +108,10 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     } catch {}
   }, [user?.token]);
 
-  const fontScale = prefs.font_size === "extra_large" ? 1.35 : prefs.font_size === "large" ? 1.15 : 1.0;
+  const ts = TEXT_SIZES[prefs.font_size] ?? TEXT_SIZES.large;
 
   return (
-    <PreferencesContext.Provider value={{ prefs, loaded, fontScale, updatePref, reloadPrefs }}>
+    <PreferencesContext.Provider value={{ prefs, loaded, ts, updatePref, reloadPrefs }}>
       {children}
     </PreferencesContext.Provider>
   );

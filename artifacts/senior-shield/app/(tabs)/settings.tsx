@@ -29,7 +29,7 @@ function SettingRow({
   iconColor = "#2563EB",
   iconBg = "#DBEAFE",
   theme,
-  fontScale,
+  ts,
 }: {
   icon: any;
   label: string;
@@ -39,7 +39,7 @@ function SettingRow({
   iconColor?: string;
   iconBg?: string;
   theme: any;
-  fontScale: number;
+  ts: any;
 }) {
   return (
     <Pressable
@@ -51,9 +51,9 @@ function SettingRow({
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>
       <View style={styles.settingText}>
-        <Text style={[styles.settingLabel, { color: theme.text, fontSize: 15 * fontScale }]}>{label}</Text>
+        <Text style={[styles.settingLabel, { color: theme.text, fontSize: ts.base }]}>{label}</Text>
         {subtitle && (
-          <Text style={[styles.settingSubtitle, { color: theme.textSecondary, fontSize: 12 * fontScale }]}>
+          <Text style={[styles.settingSubtitle, { color: theme.textSecondary, fontSize: ts.xs }]}>
             {subtitle}
           </Text>
         )}
@@ -68,7 +68,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { user, logout } = useAuth();
-  const { prefs, loaded, fontScale, updatePref } = usePreferences();
+  const { prefs, loaded, ts, updatePref } = usePreferences();
 
   const [nameInput, setNameInput] = useState(prefs.assistant_name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -109,13 +109,18 @@ export default function SettingsScreen() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user?.token}` },
       });
-      if (response.ok) {
-        logout();
-      }
+      if (response.ok) logout();
     } catch {}
     setDeleting(false);
     setConfirmingDelete(false);
   }
+
+  const textSizeLabel =
+    prefs.font_size === "extra_large"
+      ? "Extra Large"
+      : prefs.font_size === "large"
+      ? "Large"
+      : "Normal";
 
   if (!loaded) {
     return (
@@ -137,35 +142,36 @@ export default function SettingsScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: theme.text, fontSize: 26 * fontScale }]}>Settings</Text>
+      <Text style={[styles.title, { color: theme.text, fontSize: ts.h1 }]}>Settings</Text>
 
+      {/* Profile card */}
       <View style={[styles.profileCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={[styles.profileAvatar, { backgroundColor: "#DBEAFE" }]}>
-          <Text style={styles.profileAvatarText}>
+          <Text style={[styles.profileAvatarText, { fontSize: ts.xl }]}>
             {user?.first_name ? user.first_name[0].toUpperCase() : "U"}
           </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.profileName, { color: theme.text, fontSize: 16 * fontScale }]}>
+          <Text style={[styles.profileName, { color: theme.text, fontSize: ts.md }]}>
             {user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : "Your Account"}
           </Text>
           <View style={[styles.freeBadge, { backgroundColor: "#DBEAFE" }]}>
-            <Text style={[styles.freeBadgeText, { fontSize: 12 * fontScale }]}>Free Plan</Text>
+            <Text style={[styles.freeBadgeText, { fontSize: ts.xs }]}>Free Plan</Text>
           </View>
         </View>
         <Pressable onPress={() => router.push("/subscription")} style={styles.upgradeButton}>
-          <Text style={[styles.upgradeText, { fontSize: 13 * fontScale }]}>Upgrade</Text>
+          <Text style={[styles.upgradeText, { fontSize: ts.sm }]}>Upgrade</Text>
         </Pressable>
       </View>
 
       {/* VOICE & AUDIO */}
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: 11 * fontScale }]}>VOICE & AUDIO</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>VOICE & AUDIO</Text>
 
         <SettingRow
           icon="mic"
-          label="Voice Gender"
-          subtitle={prefs.preferred_voice === "female" ? `Female — ${DEFAULT_NAMES.female}` : `Male — ${DEFAULT_NAMES.male}`}
+          label="Voice"
+          subtitle={prefs.preferred_voice === "female" ? `Female — Aria (natural, warm)` : `Male — Max (natural, calm)`}
           onPress={() => {
             const newGender = prefs.preferred_voice === "female" ? "male" : "female";
             handlePrefChange("preferred_voice", newGender);
@@ -176,7 +182,7 @@ export default function SettingsScreen() {
             }
           }}
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
 
         <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
@@ -184,13 +190,21 @@ export default function SettingsScreen() {
             <Ionicons name="person" size={20} color="#2563EB" />
           </View>
           <View style={styles.settingText}>
-            <Text style={[styles.settingLabel, { color: theme.text, fontSize: 15 * fontScale }]}>Assistant Name</Text>
-            <Text style={[styles.settingSubtitle, { color: theme.textSecondary, fontSize: 12 * fontScale }]}>
+            <Text style={[styles.settingLabel, { color: theme.text, fontSize: ts.base }]}>Assistant Name</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.textSecondary, fontSize: ts.xs }]}>
               What your assistant is called
             </Text>
           </View>
           <TextInput
-            style={[styles.nameInput, { color: theme.text, borderColor: "#2563EB", backgroundColor: theme.inputBackground, fontSize: 14 * fontScale }]}
+            style={[
+              styles.nameInput,
+              {
+                color: theme.text,
+                borderColor: "#2563EB",
+                backgroundColor: theme.inputBackground,
+                fontSize: ts.sm,
+              },
+            ]}
             value={nameInput}
             onChangeText={setNameInput}
             maxLength={20}
@@ -206,20 +220,6 @@ export default function SettingsScreen() {
         </View>
 
         <SettingRow
-          icon="speedometer"
-          label="Speaking Speed"
-          subtitle={prefs.voice_speed <= 0.8 ? "Slow" : prefs.voice_speed <= 1.05 ? "Normal" : "Fast"}
-          onPress={() => {
-            const speeds = [0.7, 0.85, 1.0, 1.15, 1.3];
-            const current = speeds.findIndex(s => Math.abs(s - prefs.voice_speed) < 0.1);
-            const next = speeds[(current + 1) % speeds.length];
-            handlePrefChange("voice_speed", next);
-          }}
-          theme={theme}
-          fontScale={fontScale}
-        />
-
-        <SettingRow
           icon="text"
           label="Captions"
           subtitle="Show text for voice responses"
@@ -232,40 +232,38 @@ export default function SettingsScreen() {
             />
           }
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
       </View>
 
       {/* APPEARANCE */}
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: 11 * fontScale }]}>APPEARANCE</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>APPEARANCE</Text>
 
         <SettingRow
           icon={prefs.color_scheme === "dark" ? "moon" : "sunny"}
           label="Theme"
           subtitle={prefs.color_scheme === "dark" ? "Dark mode" : "Light mode"}
-          onPress={() => handlePrefChange("color_scheme", prefs.color_scheme === "dark" ? "light" : "dark")}
+          onPress={() =>
+            handlePrefChange("color_scheme", prefs.color_scheme === "dark" ? "light" : "dark")
+          }
           iconColor={prefs.color_scheme === "dark" ? "#818CF8" : "#F59E0B"}
           iconBg={prefs.color_scheme === "dark" ? "#EDE9FE" : "#FEF3C7"}
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
 
         <SettingRow
           icon="text-outline"
           label="Text Size"
-          subtitle={
-            prefs.font_size === "extra_large" ? "Extra Large (135%)"
-            : prefs.font_size === "large" ? "Large (115%)"
-            : "Normal (100%)"
-          }
+          subtitle={textSizeLabel}
           onPress={() => {
             const sizes: Preferences["font_size"][] = ["normal", "large", "extra_large"];
             const next = sizes[(sizes.indexOf(prefs.font_size) + 1) % sizes.length];
             handlePrefChange("font_size", next);
           }}
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
 
         <SettingRow
@@ -281,13 +279,13 @@ export default function SettingsScreen() {
             />
           }
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
       </View>
 
       {/* ACCESSIBILITY */}
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: 11 * fontScale }]}>ACCESSIBILITY</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>ACCESSIBILITY</Text>
         <SettingRow
           icon="phone-portrait"
           label="Haptic Feedback"
@@ -301,13 +299,13 @@ export default function SettingsScreen() {
             />
           }
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
       </View>
 
       {/* PRIVACY */}
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: 11 * fontScale }]}>PRIVACY</Text>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>PRIVACY</Text>
         <SettingRow
           icon="analytics"
           label="Usage Analytics"
@@ -321,35 +319,42 @@ export default function SettingsScreen() {
             />
           }
           theme={theme}
-          fontScale={fontScale}
+          ts={ts}
         />
       </View>
 
       {/* SUPPORT */}
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: 11 * fontScale }]}>SUPPORT</Text>
-        <SettingRow icon="help-circle" label="Help & Support" onPress={() => router.push("/support")} theme={theme} fontScale={fontScale} />
-        <SettingRow icon="shield-checkmark" label="Emergency" iconColor="#EF4444" iconBg="#FEE2E2" onPress={() => router.push("/emergency")} theme={theme} fontScale={fontScale} />
-        <SettingRow icon="card" label="Subscription" onPress={() => router.push("/subscription")} theme={theme} fontScale={fontScale} />
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>SUPPORT</Text>
+        <SettingRow icon="help-circle" label="Help & Support" onPress={() => router.push("/support")} theme={theme} ts={ts} />
+        <SettingRow icon="shield-checkmark" label="Emergency" iconColor="#EF4444" iconBg="#FEE2E2" onPress={() => router.push("/emergency")} theme={theme} ts={ts} />
+        <SettingRow icon="card" label="Subscription" onPress={() => router.push("/subscription")} theme={theme} ts={ts} />
       </View>
 
       <Pressable
         onPress={handleLogout}
-        style={({ pressed }) => [styles.logoutButton, { borderColor: "#FCA5A5", backgroundColor: "#FEF2F2" }, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.logoutButton,
+          { borderColor: "#FCA5A5", backgroundColor: "#FEF2F2" },
+          pressed && styles.pressed,
+        ]}
       >
         <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-        <Text style={[styles.logoutText, { fontSize: 16 * fontScale }]}>Log Out</Text>
+        <Text style={[styles.logoutText, { fontSize: ts.md }]}>Log Out</Text>
       </Pressable>
 
       {!confirmingDelete ? (
-        <Pressable onPress={() => setConfirmingDelete(true)} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
+        <Pressable
+          onPress={() => setConfirmingDelete(true)}
+          style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+        >
           <Ionicons name="trash-outline" size={16} color="#9CA3AF" />
-          <Text style={[styles.deleteButtonText, { fontSize: 13 * fontScale }]}>Delete Account</Text>
+          <Text style={[styles.deleteButtonText, { fontSize: ts.sm }]}>Delete Account</Text>
         </Pressable>
       ) : (
         <View style={styles.deleteConfirmBox}>
-          <Text style={[styles.deleteConfirmTitle, { fontSize: 16 * fontScale }]}>Delete your account?</Text>
-          <Text style={[styles.deleteConfirmSubtitle, { fontSize: 13 * fontScale }]}>
+          <Text style={[styles.deleteConfirmTitle, { fontSize: ts.md }]}>Delete your account?</Text>
+          <Text style={[styles.deleteConfirmSubtitle, { fontSize: ts.sm }]}>
             This will permanently remove all your data and cannot be undone.
           </Text>
           <View style={styles.deleteConfirmRow}>
@@ -358,23 +363,24 @@ export default function SettingsScreen() {
               style={[styles.deleteConfirmCancel, { borderColor: theme.border }]}
               disabled={deleting}
             >
-              <Text style={[styles.deleteConfirmCancelText, { color: theme.text, fontSize: 14 * fontScale }]}>Cancel</Text>
+              <Text style={[styles.deleteConfirmCancelText, { color: theme.text, fontSize: ts.sm }]}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleDeleteAccount}
               style={[styles.deleteConfirmYes, deleting && { opacity: 0.6 }]}
               disabled={deleting}
             >
-              {deleting
-                ? <ActivityIndicator size="small" color="#FFF" />
-                : <Text style={[styles.deleteConfirmYesText, { fontSize: 14 * fontScale }]}>Yes, Delete</Text>
-              }
+              {deleting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={[styles.deleteConfirmYesText, { fontSize: ts.sm }]}>Yes, Delete</Text>
+              )}
             </Pressable>
           </View>
         </View>
       )}
 
-      <Text style={[styles.version, { color: theme.textTertiary, fontSize: 12 * fontScale }]}>SeniorShield v1.0.0</Text>
+      <Text style={[styles.version, { color: theme.textTertiary, fontSize: ts.xs }]}>SeniorShield v1.0.0</Text>
     </ScrollView>
   );
 }
@@ -386,7 +392,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: "Inter_700Bold", marginBottom: 4 },
   profileCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 20, borderRadius: 20, borderWidth: 1 },
   profileAvatar: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  profileAvatarText: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#2563EB" },
+  profileAvatarText: { fontFamily: "Inter_700Bold", color: "#2563EB" },
   profileName: { fontFamily: "Inter_600SemiBold", marginBottom: 4 },
   freeBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, alignSelf: "flex-start" },
   freeBadgeText: { fontFamily: "Inter_600SemiBold", color: "#2563EB" },

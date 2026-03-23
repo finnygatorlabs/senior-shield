@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "expo-auth-session": "^7.0.10",
+    "expo-av": "^16.0.8",
     "expo-speech": "^55.0.9"
   }
 }
