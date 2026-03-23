@@ -17,6 +17,7 @@ interface User {
   first_name?: string;
   last_name?: string;
   onboarding_completed: boolean;
+  email_verified?: boolean;
 }
 
 interface AuthContextType {
@@ -24,6 +25,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, userType: string, firstName?: string, lastName?: string) => Promise<void>;
+  loginWithGoogle: (accessToken: string, userType?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
 }
@@ -78,8 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   }
 
-  async function login(email: string, password: string) {
-    const data = await apiCall("/auth/login", { email, password });
+  function storeUser(data: any) {
     const userData: User = {
       user_id: data.user_id,
       token: data.token,
@@ -87,9 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       first_name: data.first_name,
       last_name: data.last_name,
       onboarding_completed: data.onboarding_completed,
+      email_verified: data.email_verified,
     };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
     setUser(userData);
+    return userData;
+  }
+
+  async function login(email: string, password: string) {
+    const data = await apiCall("/auth/login", { email, password });
+    storeUser(data);
   }
 
   async function signup(email: string, password: string, userType: string, firstName?: string, lastName?: string) {
@@ -100,16 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       first_name: firstName,
       last_name: lastName,
     });
-    const userData: User = {
-      user_id: data.user_id,
-      token: data.token,
-      user_type: data.user_type,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      onboarding_completed: data.onboarding_completed,
-    };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-    setUser(userData);
+    storeUser(data);
+  }
+
+  async function loginWithGoogle(accessToken: string, userType?: string) {
+    const data = await apiCall("/auth/google", {
+      access_token: accessToken,
+      user_type: userType || "senior",
+    });
+    storeUser(data);
   }
 
   async function logout() {
@@ -125,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

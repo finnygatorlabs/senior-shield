@@ -189,6 +189,91 @@ router.get("/verify-email", async (req, res) => {
   }
 });
 
+router.post("/google", async (req, res) => {
+  try {
+    const { access_token, user_type } = req.body;
+
+    if (!access_token) {
+      res.status(400).json({ error: "Bad Request", message: "access_token is required" });
+      return;
+    }
+
+    const googleRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    if (!googleRes.ok) {
+      res.status(401).json({ error: "Unauthorized", message: "Invalid Google token" });
+      return;
+    }
+
+    const googleUser = await googleRes.json() as {
+      email: string;
+      given_name?: string;
+      family_name?: string;
+      sub: string;
+    };
+
+    if (!googleUser.email) {
+      res.status(400).json({ error: "Bad Request", message: "Google account has no email" });
+      return;
+    }
+
+    const email = googleUser.email.toLowerCase();
+
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+
+    if (existing) {
+      const token = generateToken({ userId: existing.id, email: existing.email, userType: existing.user_type });
+      res.json({
+        user_id: existing.id,
+        token,
+        user_type: existing.user_type,
+        first_name: existing.first_name,
+        last_name: existing.last_name,
+        onboarding_completed: existing.onboarding_completed,
+        email_verified: existing.email_verified,
+        is_new_user: false,
+      });
+      return;
+    }
+
+    const [newUser] = await db.insert(usersTable).values({
+      email,
+      password_hash: hashPassword(crypto.randomBytes(32).toString("hex")),
+      user_type: user_type || "senior",
+      first_name: googleUser.given_name || null,
+      last_name: googleUser.family_name || null,
+      email_verified: true,
+      email_verification_token: null,
+    }).returning();
+
+    await db.insert(userTiersTable).values({
+      user_id: newUser.id,
+      tier: "free",
+      status: "active",
+    });
+
+    const token = generateToken({ userId: newUser.id, email: newUser.email, userType: newUser.user_type });
+
+    req.log.info({ email }, "New user created via Google OAuth");
+
+    res.status(201).json({
+      user_id: newUser.id,
+      token,
+      user_type: newUser.user_type,
+      first_name: newUser.first_name,
+      last_name: newUser.last_name,
+      onboarding_completed: newUser.onboarding_completed,
+      email_verified: true,
+      is_new_user: true,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Google auth error");
+    res.status(500).json({ error: "Internal Server Error", message: "Google sign-in failed" });
+  }
+});
+
 router.get("/verify", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);

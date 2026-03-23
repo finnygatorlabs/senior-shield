@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
+import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 
 const USER_TYPES = [
   { value: "senior", label: "Senior (65+)", icon: "person" as const, description: "I want tech help & scam protection" },
@@ -24,7 +25,8 @@ const USER_TYPES = [
 
 export default function SignupScreen() {
   const { theme } = useTheme();
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
+  const { request, response, promptAsync, getUserInfo, isConfigured } = useGoogleAuth();
 
   const [step, setStep] = useState<"type" | "details">("type");
   const [userType, setUserType] = useState("senior");
@@ -34,6 +36,38 @@ export default function SignupScreen() {
   const [lastName, setLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        handleGoogleSuccess(authentication.accessToken);
+      }
+    }
+  }, [response]);
+
+  async function handleGoogleSuccess(accessToken: string) {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle(accessToken, userType);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Google sign-in failed", err.message || "Please try again or use email instead.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleGooglePress() {
+    if (!isConfigured) {
+      Alert.alert("Coming Soon", "Google sign-in is being set up. Please use email for now.");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await promptAsync();
+  }
 
   async function handleSignup() {
     if (!email || !password || !firstName) {
@@ -73,7 +107,11 @@ export default function SignupScreen() {
           <View style={{ width: 44 }} />
         </View>
 
-        <View style={styles.typeContainer}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.typeContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.typeTopSection}>
             <Text style={[styles.typeHeading, { color: theme.text }]}>Who are you?</Text>
             <Text style={[styles.typeSubheading, { color: theme.textSecondary }]}>
@@ -110,24 +148,47 @@ export default function SignupScreen() {
                       {type.description}
                     </Text>
                   </View>
-                  {selected && (
-                    <Ionicons name="checkmark-circle" size={24} color="#2563EB" />
-                  )}
+                  {selected && <Ionicons name="checkmark-circle" size={24} color="#2563EB" />}
                 </Pressable>
               );
             })}
           </View>
 
-          <Pressable
-            style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setStep("details");
-            }}
-          >
-            <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-          </Pressable>
+          <View style={styles.signInOptions}>
+            <Pressable
+              style={({ pressed }) => [styles.googleButton, pressed && styles.pressed, googleLoading && styles.disabled]}
+              onPress={handleGooglePress}
+              disabled={googleLoading || !request}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#374151" />
+              ) : (
+                <>
+                  <View style={styles.googleIconCircle}>
+                    <Text style={styles.googleG}>G</Text>
+                  </View>
+                  <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+                </>
+              )}
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+              <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or use email</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setStep("details");
+              }}
+            >
+              <Text style={styles.continueButtonText}>Continue with Email</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </Pressable>
+          </View>
 
           <Pressable onPress={() => router.push("/auth/login")} style={styles.switchLink}>
             <Text style={[styles.switchText, { color: theme.textSecondary }]}>
@@ -135,7 +196,7 @@ export default function SignupScreen() {
               <Text style={{ color: "#2563EB", fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
             </Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -183,8 +244,7 @@ export default function SignupScreen() {
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: theme.text }]}>
-            Last Name{" "}
-            <Text style={[styles.optional, { color: theme.textTertiary }]}>(optional)</Text>
+            Last Name <Text style={[styles.optional, { color: theme.textTertiary }]}>(optional)</Text>
           </Text>
           <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
             <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
@@ -244,17 +304,11 @@ export default function SignupScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.signupButton,
-            pressed && styles.pressed,
-            loading && styles.disabled,
-          ]}
+          style={({ pressed }) => [styles.signupButton, pressed && styles.pressed, loading && styles.disabled]}
           onPress={handleSignup}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : (
             <Text style={styles.signupButtonText}>Create Account — It's Free</Text>
           )}
         </Pressable>
@@ -281,12 +335,12 @@ const styles = StyleSheet.create({
   },
   backButton: { width: 44, height: 44, justifyContent: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
-
-  typeContainer: { flex: 1, paddingHorizontal: 24, paddingBottom: 32 },
-  typeTopSection: { paddingTop: 16, paddingBottom: 28 },
+  scroll: { flex: 1 },
+  typeContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 0 },
+  typeTopSection: { paddingTop: 8, paddingBottom: 24 },
   typeHeading: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 8 },
   typeSubheading: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22 },
-  typeList: { gap: 12, marginBottom: 32 },
+  typeList: { gap: 12, marginBottom: 28 },
   typeCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -305,7 +359,31 @@ const styles = StyleSheet.create({
   typeCardText: { flex: 1 },
   typeCardLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
   typeCardDesc: { fontSize: 13, fontFamily: "Inter_400Regular" },
-
+  signInOptions: { gap: 14 },
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+  },
+  googleIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleG: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFFFFF", lineHeight: 18 },
+  googleButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   continueButton: {
     backgroundColor: "#2563EB",
     borderRadius: 16,
@@ -314,13 +392,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 16,
   },
   continueButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-
-  scroll: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40, gap: 18 },
-
   selectedTypeBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -333,7 +407,6 @@ const styles = StyleSheet.create({
   },
   selectedTypeBadgeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#1D4ED8" },
   changeBadgeLink: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#3B82F6", marginLeft: 4 },
-
   field: { gap: 8 },
   label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   optional: { fontSize: 12, fontFamily: "Inter_400Regular" },
@@ -347,7 +420,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
-
   signupButton: {
     backgroundColor: "#2563EB",
     borderRadius: 16,

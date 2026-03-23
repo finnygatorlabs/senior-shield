@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,15 +15,49 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
+import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 
 export default function LoginScreen() {
   const { theme } = useTheme();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
+  const { request, response, promptAsync, isConfigured } = useGoogleAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        handleGoogleSuccess(authentication.accessToken);
+      }
+    }
+  }, [response]);
+
+  async function handleGoogleSuccess(accessToken: string) {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle(accessToken);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Google sign-in failed", err.message || "Please try again or use email instead.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleGooglePress() {
+    if (!isConfigured) {
+      Alert.alert("Coming Soon", "Google sign-in is being set up. Please sign in with your email for now.");
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await promptAsync();
+  }
 
   async function handleLogin() {
     if (!email || !password) {
@@ -42,27 +76,16 @@ export default function LoginScreen() {
     }
   }
 
-  function handleGoogleLogin() {
-    Alert.alert(
-      "Google Sign-In Coming Soon",
-      "Google sign-in is being set up. For now, please sign in with your email and password below.",
-      [{ text: "OK, use email" }]
-    );
-  }
-
-  function handleForgotPassword() {
+  async function handleForgotPassword() {
     Alert.prompt(
       "Forgot Password?",
-      "Enter your email address and we'll send you a link to reset your password.",
+      "Enter your email and we'll send a reset link.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Send Reset Link",
           onPress: async (inputEmail?: string) => {
-            if (!inputEmail?.trim()) {
-              Alert.alert("Email required", "Please enter your email address.");
-              return;
-            }
+            if (!inputEmail?.trim()) return;
             try {
               const domain = process.env.EXPO_PUBLIC_DOMAIN;
               const base = domain ? `https://${domain}` : "";
@@ -72,10 +95,7 @@ export default function LoginScreen() {
                 body: JSON.stringify({ email: inputEmail.trim().toLowerCase() }),
               });
             } catch {}
-            Alert.alert(
-              "Check your email",
-              `If an account exists for ${inputEmail?.trim()}, you'll receive a password reset link shortly.`
-            );
+            Alert.alert("Check your email", `If an account exists for ${inputEmail?.trim()}, you'll receive a reset link shortly.`);
           },
         },
       ],
@@ -87,7 +107,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={10}>
+        <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Sign in</Text>
@@ -111,17 +131,24 @@ export default function LoginScreen() {
         </View>
 
         <Pressable
-          onPress={handleGoogleLogin}
+          onPress={handleGooglePress}
+          disabled={googleLoading || !request}
           style={({ pressed }) => [
             styles.googleButton,
-            { backgroundColor: theme.card, borderColor: theme.border },
             pressed && styles.pressed,
+            (googleLoading) && styles.disabled,
           ]}
         >
-          <View style={styles.googleIcon}>
-            <Text style={styles.googleG}>G</Text>
-          </View>
-          <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+          {googleLoading ? (
+            <ActivityIndicator color="#374151" />
+          ) : (
+            <>
+              <View style={styles.googleIconCircle}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
+              <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+            </>
+          )}
         </Pressable>
 
         <View style={styles.dividerRow}>
@@ -168,7 +195,7 @@ export default function LoginScreen() {
               returnKeyType="done"
               onSubmitEditing={handleLogin}
             />
-            <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton} hitSlop={8}>
+            <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
@@ -179,17 +206,11 @@ export default function LoginScreen() {
         </View>
 
         <Pressable
-          style={({ pressed }) => [
-            styles.loginButton,
-            pressed && styles.pressed,
-            loading && styles.disabled,
-          ]}
+          style={({ pressed }) => [styles.loginButton, pressed && styles.pressed, loading && styles.disabled]}
           onPress={handleLogin}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : (
             <Text style={styles.loginButtonText}>Sign In</Text>
           )}
         </Pressable>
@@ -218,50 +239,22 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   scroll: { flex: 1 },
   content: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, gap: 18 },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginBottom: 8,
-  },
-  iconBg: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 },
+  iconBg: { width: 64, height: 64, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   welcomeTitle: { fontSize: 22, fontFamily: "Inter_700Bold" },
   welcomeSub: { fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 2 },
-  field: { gap: 8 },
-  label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  forgotLink: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#2563EB" },
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 10,
-  },
-  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
-  eyeButton: { padding: 4 },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
   },
-  googleIcon: {
+  googleIconCircle: {
     width: 26,
     height: 26,
     borderRadius: 13,
@@ -274,12 +267,21 @@ const styles = StyleSheet.create({
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  loginButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: 16,
-    paddingVertical: 18,
+  field: { gap: 8 },
+  label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  forgotLink: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#2563EB" },
+  input: {
+    flexDirection: "row",
     alignItems: "center",
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
   },
+  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
+  loginButton: { backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 18, alignItems: "center" },
   loginButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.6 },
