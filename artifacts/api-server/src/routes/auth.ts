@@ -1,7 +1,7 @@
 import { Router, IRouter } from "express";
 import { db } from "@workspace/db";
 import { usersTable, userTiersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, generateToken, requireAuth, AuthRequest } from "../lib/auth.js";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js";
 import crypto from "crypto";
@@ -285,6 +285,28 @@ router.get("/verify", requireAuth, async (req: AuthRequest, res) => {
   } catch (err) {
     req.log.error({ err }, "Token verify error");
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.delete("/account", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+
+    await db.execute(sql`DELETE FROM alerts WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM contact_memory WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM error_logs WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM scam_analysis WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM scam_detection_feedback WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM support_tickets WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM user_tiers WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM voice_assistance_history WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM family_relationships WHERE senior_user_id = ${userId} OR adult_child_user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
+
+    res.json({ success: true, message: "Account deleted successfully" });
+  } catch (err) {
+    req.log.error({ err }, "Delete account error");
+    res.status(500).json({ error: "Internal Server Error", message: "Could not delete account" });
   }
 });
 

@@ -88,6 +88,8 @@ export default function SettingsScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchPrefs();
@@ -135,10 +137,40 @@ export default function SettingsScreen() {
   }
 
   function handleLogout() {
-    Alert.alert("Log Out", "Are you sure you want to log out of SeniorShield?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log Out", style: "destructive", onPress: logout },
-    ]);
+    if (Platform.OS !== "web") {
+      Alert.alert("Log Out", "Are you sure you want to log out of SeniorShield?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Log Out", style: "destructive", onPress: logout },
+      ]);
+    } else {
+      logout();
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    try {
+      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const base = domain ? `https://${domain}` : "";
+      const response = await fetch(`${base}/api/auth/account`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        logout();
+      } else {
+        if (Platform.OS !== "web") {
+          Alert.alert("Error", data.message || "Could not delete account. Please try again.");
+        }
+      }
+    } catch {
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", "Could not reach server. Please try again.");
+      }
+    }
+    setDeleting(false);
+    setConfirmingDelete(false);
   }
 
   if (loading) {
@@ -316,6 +348,41 @@ export default function SettingsScreen() {
         <Text style={styles.logoutText}>Log Out</Text>
       </Pressable>
 
+      {!confirmingDelete ? (
+        <Pressable
+          onPress={() => setConfirmingDelete(true)}
+          style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="trash-outline" size={16} color="#9CA3AF" />
+          <Text style={styles.deleteButtonText}>Delete Account</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.deleteConfirmBox}>
+          <Text style={styles.deleteConfirmTitle}>Delete your account?</Text>
+          <Text style={styles.deleteConfirmSubtitle}>This will permanently remove all your data and cannot be undone.</Text>
+          <View style={styles.deleteConfirmRow}>
+            <Pressable
+              onPress={() => setConfirmingDelete(false)}
+              style={[styles.deleteConfirmCancel, { borderColor: theme.border }]}
+              disabled={deleting}
+            >
+              <Text style={[styles.deleteConfirmCancelText, { color: theme.text }]}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleDeleteAccount}
+              style={[styles.deleteConfirmYes, deleting && { opacity: 0.6 }]}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.deleteConfirmYesText}>Yes, Delete</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <Text style={[styles.version, { color: theme.textTertiary }]}>SeniorShield v1.0.0</Text>
     </ScrollView>
   );
@@ -360,4 +427,39 @@ const styles = StyleSheet.create({
   logoutText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#EF4444" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   version: { fontSize: 12, fontFamily: "Inter_400Regular", textAlign: "center" },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+  },
+  deleteButtonText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#9CA3AF" },
+  deleteConfirmBox: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    backgroundColor: "#FEF2F2",
+    padding: 20,
+    gap: 8,
+  },
+  deleteConfirmTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#DC2626" },
+  deleteConfirmSubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#6B7280", lineHeight: 18 },
+  deleteConfirmRow: { flexDirection: "row", gap: 10, marginTop: 4 },
+  deleteConfirmCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  deleteConfirmCancelText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  deleteConfirmYes: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+  },
+  deleteConfirmYesText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
 });
