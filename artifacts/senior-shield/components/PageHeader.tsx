@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     width: 74,
     height: 74,
     flexShrink: 0,
+    marginLeft: -5,
   },
   brandCol: {
     flex: 1,
