@@ -150,6 +150,15 @@ export default function HomeScreen() {
   const { prefs, ts } = usePreferences();
 
   const assistantName = prefs.assistant_name;
+
+  // Time-of-day greeting shown in the header
+  const headerGreeting = (() => {
+    const firstName = user?.first_name;
+    if (!firstName) return undefined;
+    const hour = new Date().getHours();
+    const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    return `${tod}, ${firstName}`;
+  })();
   const apiBase = (() => {
     const d = process.env.EXPO_PUBLIC_DOMAIN;
     return d ? `https://${d}` : "";
@@ -717,7 +726,7 @@ export default function HomeScreen() {
       </Modal>
 
       {/* ── Header ── */}
-      <PageHeader showTagline />
+      <PageHeader showTagline greeting={headerGreeting} />
 
       {/* ── Messages ── */}
       <ScrollView

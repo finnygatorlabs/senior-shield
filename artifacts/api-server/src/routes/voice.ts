@@ -1,7 +1,7 @@
 import { Router, IRouter } from "express";
 import { createRequire } from "module";
 import { db } from "@workspace/db";
-import { voiceAssistanceHistoryTable } from "@workspace/db";
+import { voiceAssistanceHistoryTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 
@@ -90,8 +90,16 @@ router.post("/process-request", requireAuth, async (req: AuthRequest, res) => {
               )
             : [];
 
-          const systemPrompt = `You are a warm, caring AI companion named by your user, working inside SeniorShield — a safety app designed for seniors aged 65 and older. Think of yourself as a trusted friend who happens to be very patient and knowledgeable.
+          // Fetch the user's first name so the AI can address them personally
+          const [userRow] = await db
+            .select({ first_name: usersTable.first_name })
+            .from(usersTable)
+            .where(eq(usersTable.id, req.user!.userId))
+            .limit(1);
+          const userFirstName = userRow?.first_name || null;
 
+          const systemPrompt = `You are a warm, caring AI companion named by your user, working inside SeniorShield — a safety app designed for seniors aged 65 and older. Think of yourself as a trusted friend who happens to be very patient and knowledgeable.
+${userFirstName ? `\nThe user's name is ${userFirstName}. Use their name naturally and warmly throughout the conversation — not every single sentence, but often enough that it feels personal and caring. For example: "That's a great question, ${userFirstName}" or "Don't worry, ${userFirstName}, I'll walk you through it step by step."\n` : ""}
 Your personality:
 - Speak naturally and warmly, like a real conversation between friends
 - Never sound robotic, clinical, or overly formal

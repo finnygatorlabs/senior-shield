@@ -7,12 +7,13 @@ import { usePreferences } from "@/context/PreferencesContext";
 
 interface PageHeaderProps {
   showTagline?: boolean;
+  greeting?: string; // e.g. "Good morning, Margaret"
 }
 
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
 const H_PAD = 18;
 
-export default function PageHeader({ showTagline = false }: PageHeaderProps) {
+export default function PageHeader({ showTagline = false, greeting }: PageHeaderProps) {
   const { ts } = usePreferences();
   const insets = useSafeAreaInsets();
 
@@ -45,7 +46,7 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
           >
             SeniorShield
           </Text>
-          {showTagline && (
+          {showTagline && !greeting && (
             <Text
               style={[styles.tagline, { fontSize: ts.xs }]}
               numberOfLines={1}
@@ -53,6 +54,16 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
               minimumFontScale={0.65}
             >
               Your voice assistant for tech help and scam protection
+            </Text>
+          )}
+          {!!greeting && (
+            <Text
+              style={[styles.greeting, { fontSize: ts.sm }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              {greeting}
             </Text>
           )}
         </View>
@@ -100,6 +111,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.82)",
     lineHeight: 16,
+  },
+  greeting: {
+    fontFamily: "Inter_600SemiBold",
+    color: "rgba(255,255,255,0.95)",
+    lineHeight: 20,
   },
   badge: {
     position: "absolute",
