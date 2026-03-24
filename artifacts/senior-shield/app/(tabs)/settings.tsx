@@ -19,7 +19,7 @@ import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
-import { usePreferences, DEFAULT_NAMES, Preferences } from "@/context/PreferencesContext";
+import { usePreferences, DEFAULT_NAMES, Preferences, TTS_VOICES, TtsVoice } from "@/context/PreferencesContext";
 
 function SettingRow({
   icon,
@@ -74,6 +74,45 @@ export default function SettingsScreen() {
   const [nameInput, setNameInput] = useState(prefs.assistant_name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [previewingVoice, setPreviewingVoice] = useState<TtsVoice | null>(null);
+
+  const apiBase = (() => {
+    const d = process.env.EXPO_PUBLIC_DOMAIN;
+    return d ? `https://${d}` : "";
+  })();
+
+  async function previewVoice(voice: TtsVoice) {
+    if (previewingVoice) return;
+    setPreviewingVoice(voice);
+    try {
+      const res = await fetch(`${apiBase}/api/voice/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.token}` },
+        body: JSON.stringify({ text: "Hi there! I'm here to help you today.", voice }),
+      });
+      if (res.ok) {
+        const { audio } = await res.json();
+        if (Platform.OS === "web") {
+          const el = new (window as any).Audio(`data:audio/mpeg;base64,${audio}`);
+          await el.play();
+          el.onended = () => setPreviewingVoice(null);
+          el.onerror = () => setPreviewingVoice(null);
+          return;
+        } else {
+          const { Audio } = await import("expo-av");
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: `data:audio/mpeg;base64,${audio}` },
+            { shouldPlay: true }
+          );
+          sound.setOnPlaybackStatusUpdate((s: any) => {
+            if (s.didJustFinish) { sound.unloadAsync(); setPreviewingVoice(null); }
+          });
+          return;
+        }
+      }
+    } catch {}
+    setPreviewingVoice(null);
+  }
 
   useEffect(() => {
     setNameInput(prefs.assistant_name);
@@ -166,13 +205,16 @@ export default function SettingsScreen() {
       <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary, fontSize: ts.tiny }]}>VOICE & AUDIO</Text>
 
+        {/* Gender toggle */}
         <SettingRow
           icon="mic"
-          label="Voice"
-          subtitle={prefs.preferred_voice === "female" ? `Female — Ava (natural, warm)` : `Male — Max (natural, calm)`}
+          label="Assistant Voice"
+          subtitle={prefs.preferred_voice === "female" ? "Female (Ava)" : "Male (Max)"}
           onPress={() => {
             const newGender = prefs.preferred_voice === "female" ? "male" : "female";
             handlePrefChange("preferred_voice", newGender);
+            const defaultVoice = newGender === "female" ? "nova" : "echo";
+            handlePrefChange("tts_voice", defaultVoice);
             if (prefs.assistant_name === DEFAULT_NAMES[prefs.preferred_voice]) {
               const newName = DEFAULT_NAMES[newGender];
               handlePrefChange("assistant_name", newName);
@@ -182,6 +224,62 @@ export default function SettingsScreen() {
           theme={theme}
           ts={ts}
         />
+
+        {/* Voice screener — preview and select any voice for the current gender */}
+        <View style={[styles.voiceScreener, { borderTopColor: theme.border }]}>
+          <Text style={[styles.voiceScreenerLabel, { color: theme.textSecondary, fontSize: ts.tiny }]}>
+            TRY A VOICE — TAP TO PREVIEW, HOLD TO SELECT
+          </Text>
+          <View style={styles.voiceGrid}>
+            {TTS_VOICES.filter(v => v.gender === prefs.preferred_voice).map(v => {
+              const isSelected = prefs.tts_voice === v.value;
+              const isPreviewing = previewingVoice === v.value;
+              return (
+                <Pressable
+                  key={v.value}
+                  onPress={() => previewVoice(v.value)}
+                  onLongPress={() => {
+                    handlePrefChange("tts_voice", v.value);
+                    hapticTap();
+                  }}
+                  style={[
+                    styles.voiceCard,
+                    {
+                      backgroundColor: isSelected ? "#2563EB" : theme.surface,
+                      borderColor: isSelected ? "#2563EB" : theme.cardBorder,
+                    },
+                  ]}
+                >
+                  <View style={styles.voiceCardTop}>
+                    {isPreviewing ? (
+                      <ActivityIndicator size="small" color={isSelected ? "#FFF" : "#2563EB"} />
+                    ) : (
+                      <Ionicons
+                        name={isSelected ? "checkmark-circle" : "play-circle-outline"}
+                        size={20}
+                        color={isSelected ? "#FFF" : "#2563EB"}
+                      />
+                    )}
+                  </View>
+                  <Text style={[styles.voiceCardName, { color: isSelected ? "#FFF" : theme.text, fontSize: ts.sm }]}>
+                    {v.label}
+                  </Text>
+                  <Text style={[styles.voiceCardDesc, { color: isSelected ? "rgba(255,255,255,0.8)" : theme.textSecondary, fontSize: ts.tiny }]}>
+                    {v.description}
+                  </Text>
+                  {isSelected && (
+                    <View style={styles.voiceSelectedBadge}>
+                      <Text style={{ color: "#FFF", fontFamily: "Inter_600SemiBold", fontSize: 9 }}>ACTIVE</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={[styles.voiceHint, { color: theme.textSecondary, fontSize: ts.tiny }]}>
+            Tap to hear • Hold to set as active voice
+          </Text>
+        </View>
 
         <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
           <View style={[styles.settingIcon, { backgroundColor: "#DBEAFE" }]}>
@@ -419,4 +517,13 @@ const styles = StyleSheet.create({
   deleteConfirmYes: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: "#DC2626", alignItems: "center" },
   deleteConfirmYesText: { fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   version: { fontFamily: "Inter_400Regular", textAlign: "center" },
+  voiceScreener: { borderTopWidth: 0.5, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
+  voiceScreenerLabel: { fontFamily: "Inter_600SemiBold", letterSpacing: 0.5, marginBottom: 10 },
+  voiceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  voiceCard: { borderRadius: 14, borderWidth: 1.5, padding: 12, minWidth: 90, flex: 1, alignItems: "center" },
+  voiceCardTop: { height: 24, justifyContent: "center", marginBottom: 4 },
+  voiceCardName: { fontFamily: "Inter_600SemiBold", textAlign: "center" },
+  voiceCardDesc: { fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 2, lineHeight: 14 },
+  voiceSelectedBadge: { backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 },
+  voiceHint: { fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 10 },
 });

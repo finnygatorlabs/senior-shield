@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useTheme } from "@/hooks/useTheme";
@@ -223,11 +222,9 @@ export default function HistoryScreen() {
     [user?.token, apiBase]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchSessions();
-    }, [fetchSessions])
-  );
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   async function deleteSession(id: string) {
     if (!user?.token) return;

@@ -152,8 +152,8 @@ export default function HomeScreen() {
     const d = process.env.EXPO_PUBLIC_DOMAIN;
     return d ? `https://${d}` : "";
   })();
-  // Female: nova (warm, human-like) | Male: echo (upbeat, energetic)
-  const ttsVoice = prefs.preferred_voice === "female" ? "nova" : "echo";
+  // Use the user's specifically chosen TTS voice from preferences
+  const ttsVoice = prefs.tts_voice || (prefs.preferred_voice === "female" ? "nova" : "echo");
   // Ref always holds the latest voice so stale closures (e.g. inside SpeechRecognition) never use the wrong voice
   const ttsVoiceRef = useRef(ttsVoice);
   useEffect(() => { ttsVoiceRef.current = ttsVoice; }, [ttsVoice]);
@@ -189,8 +189,9 @@ export default function HomeScreen() {
   // speakTextRef lets sendMessage (captured inside startListening) always call the latest speakText
   // even if sendMessage itself is a stale closure from an earlier render
   const speakTextRef = useRef<(text: string, thenListen?: boolean) => void>(() => {});
-  // Single persistent Audio element (blessed once during unlockAudio user gesture — never needs re-blessing)
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  // Web Audio API — more reliable than HTML Audio in iframes (no autoplay policy issues)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioSrcNodeRef = useRef<AudioBufferSourceNode | null>(null);
   // AbortController for the in-flight TTS fetch — cancel it when a new TTS call starts
   const abortTTSRef = useRef<AbortController | null>(null);
   // Monotonically increasing call ID — lets us discard stale responses from old TTS fetches
@@ -233,47 +234,47 @@ export default function HomeScreen() {
           signal: ctrl.signal,
         });
 
-        // Stale response — a newer TTS call already took over; discard this one
         if (callId !== ttsCallIdRef.current) return;
 
         if (res.ok) {
           const { audio } = await res.json();
-          if (callId !== ttsCallIdRef.current) return; // check again after await
+          if (callId !== ttsCallIdRef.current) return;
 
-          // Reuse the single blessed Audio element (created in unlockAudio)
-          const el = audioElRef.current;
-          if (!el) { setIsSpeaking(false); return; }
+          // Use Web Audio API — works reliably in iframes where HTML Audio.play() is blocked
+          const ctx = audioCtxRef.current;
+          if (!ctx) { setIsSpeaking(false); return; }
 
-          // Stop any currently playing audio on the same element
-          el.pause();
-          el.onended = null;
-          el.onerror = null;
-
-          el.src = `data:audio/mpeg;base64,${audio}`;
-          el.onended = () => {
-            if (callId !== ttsCallIdRef.current) return;
-            onTtsDoneRef.current(); // chain next sentence chunk or finish
-          };
-          el.onerror = () => {
-            if (callId !== ttsCallIdRef.current) return;
-            chunkQueueRef.current = []; // discard remaining chunks on error
-            setIsSpeaking(false);
-            if (shouldListenAfterSpeak.current) startListening();
-          };
-          try {
-            await el.play();
-          } catch {
-            // play() failed even with blessed element — just end silently (text is in chat)
-            chunkQueueRef.current = [];
-            setIsSpeaking(false);
-            if (shouldListenAfterSpeak.current) startListening();
+          // Stop any currently playing source node
+          if (audioSrcNodeRef.current) {
+            audioSrcNodeRef.current.onended = null;
+            try { audioSrcNodeRef.current.stop(); } catch {}
+            audioSrcNodeRef.current = null;
           }
+
+          // Decode base64 MP3 → ArrayBuffer → AudioBuffer → play
+          const binary = atob(audio);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+          const audioBuffer = await ctx.decodeAudioData(bytes.buffer.slice(0));
+          if (callId !== ttsCallIdRef.current) return;
+
+          const srcNode = ctx.createBufferSource();
+          srcNode.buffer = audioBuffer;
+          srcNode.connect(ctx.destination);
+          audioSrcNodeRef.current = srcNode;
+
+          srcNode.onended = () => {
+            if (callId !== ttsCallIdRef.current) return;
+            audioSrcNodeRef.current = null;
+            onTtsDoneRef.current();
+          };
+          srcNode.start(0);
           return;
         }
       } catch (e: any) {
-        if (e?.name === "AbortError") return; // intentionally cancelled — don't change state
+        if (e?.name === "AbortError") return;
       }
-      // OpenAI TTS failed completely — end speaking silently (user can read text in chat)
       setIsSpeaking(false);
       if (shouldListenAfterSpeak.current) startListening();
       return;
@@ -350,10 +351,10 @@ export default function HomeScreen() {
     // Increment call ID so any already-received response is treated as stale
     ttsCallIdRef.current++;
     if (Platform.OS === "web") {
-      if (audioElRef.current) {
-        audioElRef.current.pause();
-        audioElRef.current.onended = null;
-        audioElRef.current.onerror = null;
+      if (audioSrcNodeRef.current) {
+        audioSrcNodeRef.current.onended = null;
+        try { audioSrcNodeRef.current.stop(); } catch {}
+        audioSrcNodeRef.current = null;
       }
     } else {
       audioRef.current?.pause();
@@ -432,28 +433,20 @@ export default function HomeScreen() {
   function unlockAudio() {
     if (audioReady) return;
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      // 1. Unlock Web AudioContext (required for AudioContext.resume)
       try {
+        // Create and store the AudioContext during this user gesture — this unlocks it.
+        // Web Audio API is not subject to iframe autoplay restrictions once the context
+        // is created within a user gesture, making it far more reliable than HTML Audio.
         const ctx = new (window as any).AudioContext();
-        const buf = ctx.createBuffer(1, 1, 22050);
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start(0);
+        audioCtxRef.current = ctx;
+        // Play a silent 1-sample buffer to activate the context immediately
+        const silentBuf = ctx.createBuffer(1, 1, 22050);
+        const silentSrc = ctx.createBufferSource();
+        silentSrc.buffer = silentBuf;
+        silentSrc.connect(ctx.destination);
+        silentSrc.start(0);
       } catch {}
-      // 2. Create and bless ONE persistent Audio element during this user gesture.
-      //    iOS permanently blesses an Audio element once play() is called within a gesture —
-      //    reusing it for all TTS avoids ever hitting "autoplay blocked" again.
-      //    IMPORTANT: assign to ref SYNCHRONOUSLY so greeting TTS can use it immediately.
-      try {
-        const SILENT_MP3 =
-          "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsgU291bmRzIE11c2ljIExpY2Vuc2UARlRZUEUAAAAHAAABiAAAAAQAAAAA";
-        const el = new Audio(SILENT_MP3);
-        el.volume = 0;
-        audioElRef.current = el; // synchronous — available instantly for greeting TTS
-        el.play().then(() => { el.volume = 1; }).catch(() => {});
-      } catch {}
-      // 3. Pre-request microphone permission so iOS only shows the dialog once
+      // Pre-request microphone so the browser dialog appears now, not mid-conversation
       if (navigator.mediaDevices?.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({ audio: true })
@@ -463,6 +456,11 @@ export default function HomeScreen() {
     }
     setAudioReady(true);
   }
+
+  // Close AudioContext when the screen unmounts to free system resources
+  useEffect(() => {
+    return () => { audioCtxRef.current?.close().catch(() => {}); };
+  }, []);
 
   // ── Send message ──
   async function sendMessage(text: string) {

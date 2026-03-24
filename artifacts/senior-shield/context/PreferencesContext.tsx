@@ -7,9 +7,21 @@ export const DEFAULT_NAMES: Record<string, string> = { female: "Ava", male: "Max
 export type FontSize = "normal" | "large" | "extra_large";
 export type ColorScheme = "light" | "dark";
 export type VoiceGender = "female" | "male";
+export type TtsVoice = "nova" | "shimmer" | "alloy" | "echo" | "fable" | "onyx";
+
+// All available voices with display names and descriptions
+export const TTS_VOICES: { value: TtsVoice; label: string; gender: VoiceGender; description: string }[] = [
+  { value: "nova",    label: "Nova",    gender: "female", description: "Warm & friendly" },
+  { value: "shimmer", label: "Shimmer", gender: "female", description: "Soft & gentle" },
+  { value: "alloy",   label: "Alloy",   gender: "female", description: "Clear & balanced" },
+  { value: "echo",    label: "Echo",    gender: "male",   description: "Energetic & upbeat" },
+  { value: "fable",   label: "Fable",   gender: "male",   description: "Warm storyteller" },
+  { value: "onyx",    label: "Onyx",    gender: "male",   description: "Deep & authoritative" },
+];
 
 export interface Preferences {
   preferred_voice: VoiceGender;
+  tts_voice: TtsVoice;
   voice_speed: number;
   voice_volume: number;
   color_scheme: ColorScheme;
@@ -23,6 +35,7 @@ export interface Preferences {
 
 const DEFAULT_PREFS: Preferences = {
   preferred_voice: "female",
+  tts_voice: "nova",
   voice_speed: 1.0,
   voice_volume: 0.8,
   color_scheme: "light",
@@ -79,6 +92,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           captions_enabled: data.captions_enabled !== false,
           data_collection_enabled: data.data_collection_enabled !== false,
           assistant_name: data.assistant_name || DEFAULT_NAMES[gender],
+          tts_voice: (data.tts_voice as TtsVoice) || (gender === "female" ? "nova" : "echo"),
         });
       }
     } catch {}

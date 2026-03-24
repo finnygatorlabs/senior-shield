@@ -41,6 +41,7 @@ export const usersTable = pgTable("users", {
   location_access: boolean("location_access").default(false),
   microphone_access: boolean("microphone_access").default(true),
   assistant_name: varchar("assistant_name"),
+  tts_voice: varchar("tts_voice").default("nova"),
   onboarding_completed: boolean("onboarding_completed").default(false),
   onboarding_step: integer("onboarding_step").default(0),
   email_verified: boolean("email_verified").default(false),

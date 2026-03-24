@@ -82,6 +82,7 @@ router.get("/preferences", requireAuth, async (req: AuthRequest, res) => {
       captions_enabled: user.captions_enabled,
       data_collection_enabled: user.data_collection_enabled,
       assistant_name: (user as any).assistant_name ?? null,
+      tts_voice: (user as any).tts_voice ?? "nova",
     });
   } catch (err) {
     req.log.error({ err }, "Get preferences error");
@@ -94,7 +95,7 @@ router.put("/preferences", requireAuth, async (req: AuthRequest, res) => {
     const allowed = [
       "preferred_voice", "voice_speed", "voice_volume", "color_scheme",
       "high_contrast_enabled", "font_size", "haptic_feedback",
-      "captions_enabled", "data_collection_enabled", "assistant_name"
+      "captions_enabled", "data_collection_enabled", "assistant_name", "tts_voice"
     ];
 
     const updates: Record<string, unknown> = { updated_at: new Date() };
@@ -119,6 +120,7 @@ router.put("/preferences", requireAuth, async (req: AuthRequest, res) => {
       captions_enabled: updated.captions_enabled,
       data_collection_enabled: updated.data_collection_enabled,
       assistant_name: (updated as any).assistant_name ?? null,
+      tts_voice: (updated as any).tts_voice ?? "nova",
     });
   } catch (err) {
     req.log.error({ err }, "Update preferences error");
