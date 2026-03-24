@@ -138,6 +138,11 @@ export default function HomeScreen() {
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const shouldListenAfterSpeak = useRef(false);
+  // Always holds latest values so stale closures (e.g. inside startListening) never read old state
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+  const historyRef = useRef<ConvTurn[]>([]);
+  useEffect(() => { historyRef.current = history; }, [history]);
 
   // ── TTS ──
   const speakText = useCallback(async (text: string, thenListen = false) => {
@@ -361,16 +366,25 @@ export default function HomeScreen() {
     setIsSending(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
 
-    const updatedHistory: ConvTurn[] = [...history, { role: "user", content: text.trim() }];
+    // Always read from refs so stale closures (e.g. inside startListening) use current token + history
+    const updatedHistory: ConvTurn[] = [...historyRef.current, { role: "user", content: text.trim() }];
+    const freshToken = userRef.current?.token;
+    const freshAuthH = { Authorization: `Bearer ${freshToken}` };
     try {
       const res = await fetch(`${apiBase}/api/voice/process-request`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authH },
+        headers: { "Content-Type": "application/json", ...freshAuthH },
         body: JSON.stringify({
           request_text: text.trim(),
           conversation_history: updatedHistory.slice(-12),
         }),
       });
+      if (res.status === 401) {
+        const authErr = "It looks like your session expired. Please go to Settings and sign in again.";
+        setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: authErr, isLoading: false } : m));
+        speakText(authErr, false);
+        return;
+      }
       const data = await res.json();
       const reply = data.response_text || "I'm sorry, could you repeat that?";
       setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: reply, isLoading: false } : m));
