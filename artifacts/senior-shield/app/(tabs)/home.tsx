@@ -162,6 +162,12 @@ export default function HomeScreen() {
   // speakTextRef lets sendMessage (captured inside startListening) always call the latest speakText
   // even if sendMessage itself is a stale closure from an earlier render
   const speakTextRef = useRef<(text: string, thenListen?: boolean) => void>(() => {});
+  // Single persistent Audio element (blessed once during unlockAudio user gesture — never needs re-blessing)
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  // AbortController for the in-flight TTS fetch — cancel it when a new TTS call starts
+  const abortTTSRef = useRef<AbortController | null>(null);
+  // Monotonically increasing call ID — lets us discard stale responses from old TTS fetches
+  const ttsCallIdRef = useRef(0);
 
   // ── TTS ──
   const speakText = useCallback(async (text: string, thenListen = false) => {
@@ -169,6 +175,15 @@ export default function HomeScreen() {
       if (thenListen) startListening();
       return;
     }
+
+    // Cancel any in-flight TTS fetch immediately so we don't get competing audio
+    abortTTSRef.current?.abort();
+    const ctrl = new AbortController();
+    abortTTSRef.current = ctrl;
+
+    // Unique ID for this call — lets us discard stale responses if a newer call won
+    const callId = ++ttsCallIdRef.current;
+
     shouldListenAfterSpeak.current = thenListen;
     setIsSpeaking(true);
 
@@ -178,63 +193,66 @@ export default function HomeScreen() {
         const res = await fetch(`${apiBase}/api/voice/tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${ttsToken}` },
-          body: JSON.stringify({ text: text.slice(0, 900), voice: ttsVoiceRef.current }),
+          body: JSON.stringify({ text: text.slice(0, 600), voice: ttsVoiceRef.current }),
+          signal: ctrl.signal,
         });
+
+        // Stale response — a newer TTS call already took over; discard this one
+        if (callId !== ttsCallIdRef.current) return;
+
         if (res.ok) {
           const { audio } = await res.json();
-          if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-          const el = new Audio(`data:audio/mpeg;base64,${audio}`);
-          audioRef.current = el;
+          if (callId !== ttsCallIdRef.current) return; // check again after await
+
+          // Reuse the single blessed Audio element (created in unlockAudio)
+          const el = audioElRef.current;
+          if (!el) { setIsSpeaking(false); return; }
+
+          // Stop any currently playing audio on the same element
+          el.pause();
+          el.onended = null;
+          el.onerror = null;
+
+          el.src = `data:audio/mpeg;base64,${audio}`;
           el.onended = () => {
+            if (callId !== ttsCallIdRef.current) return;
             setIsSpeaking(false);
-            audioRef.current = null;
             if (shouldListenAfterSpeak.current) startListening();
           };
           el.onerror = () => {
+            if (callId !== ttsCallIdRef.current) return;
             setIsSpeaking(false);
-            audioRef.current = null;
             if (shouldListenAfterSpeak.current) startListening();
           };
-          try { await el.play(); } catch {
-            // Autoplay blocked — fall through to speech synthesis
-            audioRef.current = null;
-            throw new Error("autoplay");
+          try {
+            await el.play();
+          } catch {
+            // play() failed even with blessed element — just end silently (text is in chat)
+            setIsSpeaking(false);
+            if (shouldListenAfterSpeak.current) startListening();
           }
           return;
         }
       } catch (e: any) {
-        // If autoplay, try browser TTS
+        if (e?.name === "AbortError") return; // intentionally cancelled — don't change state
       }
-      // Browser TTS fallback (only if OpenAI audio completely unavailable)
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 0.92;
-        const voices = window.speechSynthesis.getVoices();
-        // Prefer en-US voices to avoid British/Australian accents (e.g. Daniel = British)
-        const usVoices = voices.filter(v => v.lang === "en-US");
-        const pool = usVoices.length > 0 ? usVoices : voices.filter(v => v.lang.startsWith("en"));
-        const target = prefs.preferred_voice === "female"
-          ? pool.find(v => /samantha|victoria|fiona|karen|zira|susan|female/i.test(v.name)) || pool[0]
-          : pool.find(v => /alex|tom|fred|mark|guy|male/i.test(v.name)) || pool[0];
-        if (target) utter.voice = target;
-        utter.onend = () => {
-          setIsSpeaking(false);
-          if (shouldListenAfterSpeak.current) startListening();
-        };
-        window.speechSynthesis.speak(utter);
-        return;
-      }
+      // OpenAI TTS failed completely — end speaking silently (user can read text in chat)
+      setIsSpeaking(false);
+      if (shouldListenAfterSpeak.current) startListening();
+      return;
     } else {
       try {
         const ttsToken = userRef.current?.token;
         const res = await fetch(`${apiBase}/api/voice/tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${ttsToken}` },
-          body: JSON.stringify({ text: text.slice(0, 900), voice: ttsVoiceRef.current }),
+          body: JSON.stringify({ text: text.slice(0, 600), voice: ttsVoiceRef.current }),
+          signal: ctrl.signal,
         });
+        if (callId !== ttsCallIdRef.current) return;
         if (res.ok) {
           const { audio } = await res.json();
+          if (callId !== ttsCallIdRef.current) return;
           const { Audio } = await import("expo-av");
           const { sound } = await Audio.Sound.createAsync(
             { uri: `data:audio/mpeg;base64,${audio}` },
@@ -249,20 +267,17 @@ export default function HomeScreen() {
           });
           return;
         }
-      } catch {}
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+      }
+      // Native fallback: expo-speech (built-in TTS, maintains voice preference)
       const Sp = await import("expo-speech");
       Sp.default.stop();
       Sp.default.speak(text, {
         rate: 0.92,
         pitch: prefs.preferred_voice === "female" ? 1.05 : 0.86,
-        onDone: () => {
-          setIsSpeaking(false);
-          if (shouldListenAfterSpeak.current) startListening();
-        },
-        onError: () => {
-          setIsSpeaking(false);
-          if (shouldListenAfterSpeak.current) startListening();
-        },
+        onDone: () => { setIsSpeaking(false); if (shouldListenAfterSpeak.current) startListening(); },
+        onError: () => { setIsSpeaking(false); if (shouldListenAfterSpeak.current) startListening(); },
       });
       return;
     }
@@ -274,11 +289,20 @@ export default function HomeScreen() {
 
   const stopSpeaking = useCallback(() => {
     shouldListenAfterSpeak.current = false;
+    // Cancel any in-flight TTS fetch — this stops the network request mid-flight
+    abortTTSRef.current?.abort();
+    abortTTSRef.current = null;
+    // Increment call ID so any already-received response is treated as stale
+    ttsCallIdRef.current++;
     if (Platform.OS === "web") {
+      if (audioElRef.current) {
+        audioElRef.current.pause();
+        audioElRef.current.onended = null;
+        audioElRef.current.onerror = null;
+      }
+    } else {
       audioRef.current?.pause();
       audioRef.current = null;
-      window.speechSynthesis?.cancel();
-    } else {
       import("expo-speech").then(m => m.default.stop()).catch(() => {});
     }
     setIsSpeaking(false);
@@ -362,15 +386,17 @@ export default function HomeScreen() {
         src.connect(ctx.destination);
         src.start(0);
       } catch {}
-      // 2. Pre-bless the <audio> element autoplay during this user gesture.
-      //    iOS only allows el.play() later if a play() was called during a gesture.
-      //    Use the shortest valid silent MP3 (44 bytes) so it completes instantly.
+      // 2. Create and bless ONE persistent Audio element during this user gesture.
+      //    iOS permanently blesses an Audio element once play() is called within a gesture —
+      //    reusing it for all TTS avoids ever hitting "autoplay blocked" again.
       try {
         const SILENT_MP3 =
           "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsgU291bmRzIE11c2ljIExpY2Vuc2UARlRZUEUAAAAHAAABiAAAAAQAAAAA";
-        const primer = new Audio(SILENT_MP3);
-        primer.volume = 0;
-        primer.play().catch(() => {});
+        const el = new Audio(SILENT_MP3);
+        el.volume = 0;
+        el.play()
+          .then(() => { el.volume = 1; audioElRef.current = el; })
+          .catch(() => { audioElRef.current = el; }); // still store it even if play failed
       } catch {}
       // 3. Pre-request microphone permission so iOS only shows the dialog once
       if (navigator.mediaDevices?.getUserMedia) {
