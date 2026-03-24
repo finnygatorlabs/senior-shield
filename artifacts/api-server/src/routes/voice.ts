@@ -162,10 +162,10 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
         Authorization: `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: "tts-1",
+        model: "tts-1-hd",
         input: text.slice(0, 4096),
         voice: safeVoice,
-        speed: 0.95,
+        speed: 1.0,
       }),
     });
 
