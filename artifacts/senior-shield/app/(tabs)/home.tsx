@@ -174,6 +174,9 @@ export default function HomeScreen() {
   const voiceMutedRef = useRef(false);
   useEffect(() => { voiceMutedRef.current = voiceMuted; }, [voiceMuted]);
 
+  // Conversation session ID — created on first exchange, used to append subsequent turns
+  const sessionIdRef = useRef<string | null>(null);
+
   const scrollRef = useRef<ScrollView>(null);
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -501,7 +504,23 @@ export default function HomeScreen() {
       const data = await res.json();
       const reply = data.response_text || "I'm sorry, could you repeat that?";
       setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: reply, isLoading: false } : m));
-      setHistory([...updatedHistory, { role: "assistant", content: reply }]);
+      const newHistory = [...updatedHistory, { role: "assistant" as const, content: reply }];
+      setHistory(newHistory);
+
+      // Save/update conversation session in background (fire-and-forget)
+      const saveToken = userRef.current?.token;
+      const saveHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${saveToken}` };
+      const savePayload = JSON.stringify({ messages: newHistory });
+      if (!sessionIdRef.current) {
+        fetch(`${apiBase}/api/conversations`, { method: "POST", headers: saveHeaders, body: savePayload })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d?.id) sessionIdRef.current = d.id; })
+          .catch(() => {});
+      } else {
+        fetch(`${apiBase}/api/conversations/${sessionIdRef.current}`, { method: "PUT", headers: saveHeaders, body: savePayload })
+          .catch(() => {});
+      }
+
       // Sentence-streaming: split into chunks, speak first chunk immediately (fast),
       // queue the rest — each chunk fires TTS while the previous chunk is still playing.
       const cleanReply = stripMarkdown(reply);
@@ -552,12 +571,15 @@ export default function HomeScreen() {
 
 
   const orbBottomPad = tabBarHeight + insets.bottom + 8;
-  // Orb is compact (small) when idle — audio ready but not currently listening or speaking
-  const isOrbIdle = audioReady && greeted && !isListening && !isSpeaking;
-  // Footer height changes based on active vs compact state:
-  // Active: statusLabel (24) + gap (14) + orb (176) + gap (18) + typeBtn (22) + padding (20) = 274
-  // Compact: orb (80) + label (22) + padding (24) = 126 — saves ~148px for the message list
-  const ORB_FOOTER_HEIGHT = isOrbIdle ? 80 + 22 + 24 : 24 + 14 + 176 + 18 + 22 + 20;
+  // Orb is compact once the conversation starts and stays compact for the entire session.
+  // Full size is only shown before the first tap — it invites the senior to begin.
+  // Keeping it compact through listening/speaking/idle maximises message visibility.
+  const isOrbCompact = greeted;
+  // Idle = compact + not actively listening/speaking (used for status row + "Type instead" logic)
+  const isOrbIdle = greeted && !isListening && !isSpeaking;
+  // Compact footer: orb(80) + status(32, when active) + typeBtn(36) + padding = ~160px
+  // Full footer: status(32) + gap(14) + orb(176) + gap(18) + typeBtn(36) + padding = ~300px
+  const ORB_FOOTER_HEIGHT = isOrbCompact ? 160 : 300;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -601,8 +623,8 @@ export default function HomeScreen() {
             {
               bottom: orbBottomPad,
               backgroundColor: theme.background,
-              paddingTop: isOrbIdle ? 8 : 16,
-              paddingBottom: isOrbIdle ? 8 : 16,
+              paddingTop: isOrbCompact ? 8 : 16,
+              paddingBottom: isOrbCompact ? 8 : 16,
             },
           ]}
         >
@@ -638,11 +660,11 @@ export default function HomeScreen() {
             isListening={isListening}
             isSpeaking={isSpeaking}
             audioReady={audioReady}
-            isIdle={isOrbIdle}
+            isIdle={isOrbCompact}
           />
 
-          {/* "Type instead" — shown only when active (listening/speaking/initial) */}
-          {!isOrbIdle && (
+          {/* "Type instead" — visible before greeting (full orb) and when idle after greeting */}
+          {!isListening && !isSpeaking && (
             <Pressable
               onPress={() => { stopListening(); stopSpeaking(); setShowText(true); }}
               hitSlop={16}

@@ -8,6 +8,7 @@ import familyRouter from "./family.js";
 import alertsRouter from "./alerts.js";
 import billingRouter from "./billing.js";
 import supportRouter from "./support.js";
+import conversationsRouter from "./conversations.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/family", familyRouter);
 router.use("/alerts", alertsRouter);
 router.use("/billing", billingRouter);
 router.use("/support", supportRouter);
+router.use("/conversations", conversationsRouter);
 
 export default router;

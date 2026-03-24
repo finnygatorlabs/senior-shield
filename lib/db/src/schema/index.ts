@@ -40,6 +40,7 @@ export const usersTable = pgTable("users", {
   data_collection_enabled: boolean("data_collection_enabled").default(true),
   location_access: boolean("location_access").default(false),
   microphone_access: boolean("microphone_access").default(true),
+  assistant_name: varchar("assistant_name"),
   onboarding_completed: boolean("onboarding_completed").default(false),
   onboarding_step: integer("onboarding_step").default(0),
   email_verified: boolean("email_verified").default(false),
@@ -210,3 +211,13 @@ export const adminMetricsTable = pgTable("admin_metrics", {
 });
 
 export type AdminMetrics = typeof adminMetricsTable.$inferSelect;
+
+export const conversationSessionsTable = pgTable("conversation_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  messages: jsonb("messages").notNull().$type<Array<{ role: string; content: string }>>(),
+  started_at: timestamp("started_at").defaultNow().notNull(),
+  expires_at: timestamp("expires_at").notNull(),
+});
+
+export type ConversationSession = typeof conversationSessionsTable.$inferSelect;
