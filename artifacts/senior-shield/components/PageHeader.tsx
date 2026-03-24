@@ -9,7 +9,6 @@ interface PageHeaderProps {
   showTagline?: boolean;
 }
 
-// Ties into the orb's dark-navy + cyan palette
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
 
 export default function PageHeader({ showTagline = false }: PageHeaderProps) {
@@ -26,44 +25,40 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
         { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) },
       ]}
     >
-      {/* Main row: logo | brand | protected */}
-      <View style={styles.row}>
-
-        {/* Logo — transparent PNG, no container tile */}
+      {/* Row 1: logo · name · protected */}
+      <View style={styles.topRow}>
         <Image
           source={require("../assets/images/logo-shield.png")}
           style={styles.logo}
           resizeMode="contain"
         />
 
-        {/* Brand: app name + tagline stacked */}
-        <View style={styles.brandCol}>
-          <Text
-            style={[styles.appName, { fontSize: ts.h1 }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            SeniorShield
-          </Text>
-          {showTagline && (
-            <Text
-              style={[styles.tagline, { fontSize: ts.sm }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.65}
-            >
-              Your voice assistant for tech help and scam protection
-            </Text>
-          )}
-        </View>
+        <Text
+          style={[styles.appName, { fontSize: ts.h1 }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          SeniorShield
+        </Text>
 
-        {/* Protected — far right, top-aligned */}
+        {/* Protected — pushed to far right */}
         <View style={styles.badge}>
           <Ionicons name="shield-checkmark" size={11} color="#FFFFFF" />
           <Text style={[styles.badgeText, { fontSize: ts.xs }]}>Protected</Text>
         </View>
-
       </View>
+
+      {/* Row 2: tagline spans full header width */}
+      {showTagline && (
+        <Text
+          style={[styles.tagline, { fontSize: ts.sm }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.68}
+        >
+          Your voice assistant for tech help and scam protection
+        </Text>
+      )}
     </LinearGradient>
   );
 }
@@ -71,42 +66,40 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 18,
-    paddingBottom: 16,
+    paddingBottom: 14,
+    gap: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 6,
   },
-  row: {
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
   },
   logo: {
-    width: 48,
-    height: 48,
+    width: 58,
+    height: 58,
     flexShrink: 0,
     backgroundColor: "transparent",
-  },
-  brandCol: {
-    flex: 1,
-    gap: 3,
   },
   appName: {
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
     letterSpacing: -0.5,
+    flex: 1,
   },
   tagline: {
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.78)",
-    lineHeight: 17,
+    color: "rgba(255,255,255,0.80)",
+    lineHeight: 18,
+    paddingLeft: 2,
   },
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "center",
     gap: 4,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
