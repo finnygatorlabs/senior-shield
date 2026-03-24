@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const USER_TYPES = [
   { value: "senior", label: "Senior (65+)", icon: "person" as const, description: "I want tech help & scam protection" },
@@ -57,7 +61,7 @@ const errStyles = StyleSheet.create({
 
 export default function SignupScreen() {
   const { theme } = useTheme();
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
 
   const [step, setStep] = useState<"type" | "details">("type");
   const [userType, setUserType] = useState("senior");
@@ -67,7 +71,29 @@ export default function SignupScreen() {
   const [lastName, setLastName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === "success") {
+      const token = googleResponse.authentication?.accessToken;
+      if (token) {
+        setGoogleLoading(true);
+        loginWithGoogle(token, userType)
+          .catch(() => {
+            if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            showError("Google sign-in failed. Please try again.");
+          })
+          .finally(() => setGoogleLoading(false));
+      }
+    } else if (googleResponse?.type === "error") {
+      showError("Google sign-in was cancelled. Please try again.");
+    }
+  }, [googleResponse]);
 
   function showError(msg: string) {
     setError(msg);
@@ -167,13 +193,23 @@ export default function SignupScreen() {
 
           <View style={styles.signInOptions}>
             <Pressable
-              style={[styles.googleButton, styles.googleButtonDisabled]}
-              onPress={() => Alert.alert("Coming Soon", "Google sign-in is being set up. Please use email for now.")}
+              style={[styles.googleButton, googleLoading && styles.googleButtonDisabled]}
+              onPress={() => {
+                setError("");
+                googlePromptAsync();
+              }}
+              disabled={googleLoading}
             >
-              <View style={styles.googleIconCircle}>
-                <Text style={styles.googleG}>G</Text>
-              </View>
-              <Text style={[styles.googleButtonText, { color: theme.textSecondary }]}>Continue with Google</Text>
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#374151" />
+              ) : (
+                <>
+                  <View style={styles.googleIconCircle}>
+                    <Text style={styles.googleG}>G</Text>
+                  </View>
+                  <Text style={[styles.googleButtonText, { color: theme.textSecondary }]}>Continue with Google</Text>
+                </>
+              )}
             </Pressable>
 
             <View style={styles.dividerRow}>
@@ -385,7 +421,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#4285F4",
     alignItems: "center",
     justifyContent: "center",
   },

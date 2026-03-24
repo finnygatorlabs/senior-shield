@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
+
+WebBrowser.maybeCompleteAuthSession();
 
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
@@ -79,14 +83,33 @@ const successStyles = StyleSheet.create({
 
 export default function LoginScreen() {
   const { theme } = useTheme();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === "success") {
+      const token = googleResponse.authentication?.accessToken;
+      if (token) {
+        setGoogleLoading(true);
+        loginWithGoogle(token)
+          .catch(() => showError("Google sign-in failed. Please try again."))
+          .finally(() => setGoogleLoading(false));
+      }
+    } else if (googleResponse?.type === "error") {
+      showError("Google sign-in was cancelled or failed. Please try again.");
+    }
+  }, [googleResponse]);
 
   function showError(msg: string) {
     setError(msg);
@@ -160,13 +183,24 @@ export default function LoginScreen() {
         </View>
 
         <Pressable
-          style={[styles.googleButton]}
-          onPress={() => setSuccess("Google sign-in is coming soon. Please sign in with your email for now.")}
+          style={[styles.googleButton, (loading || googleLoading) && styles.disabled]}
+          onPress={() => {
+            setError("");
+            setSuccess("");
+            googlePromptAsync();
+          }}
+          disabled={loading || googleLoading}
         >
-          <View style={styles.googleIconCircle}>
-            <Text style={styles.googleG}>G</Text>
-          </View>
-          <Text style={[styles.googleButtonText, { color: theme.textSecondary }]}>Continue with Google</Text>
+          {googleLoading ? (
+            <ActivityIndicator size="small" color="#374151" />
+          ) : (
+            <>
+              <View style={styles.googleIconCircle}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
+              <Text style={[styles.googleButtonText, { color: theme.textSecondary }]}>Continue with Google</Text>
+            </>
+          )}
         </Pressable>
 
         <View style={styles.dividerRow}>
@@ -274,13 +308,12 @@ const styles = StyleSheet.create({
     borderColor: "#D1D5DB",
     backgroundColor: "#F9FAFB",
     paddingVertical: 16,
-    opacity: 0.6,
   },
   googleIconCircle: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#4285F4",
     alignItems: "center",
     justifyContent: "center",
   },

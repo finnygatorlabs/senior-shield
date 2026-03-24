@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable, userTiersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { hashPassword, verifyPassword, generateToken, requireAuth, AuthRequest } from "../lib/auth.js";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js";
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "../lib/email.js";
 import crypto from "crypto";
 
 const router: IRouter = Router();
@@ -260,6 +260,13 @@ router.post("/google", async (req, res) => {
     const token = generateToken({ userId: newUser.id, email: newUser.email, userType: newUser.user_type });
 
     req.log.info({ email }, "New user created via Google OAuth");
+
+    try {
+      await sendWelcomeEmail(email, googleUser.given_name);
+      req.log.info({ email }, "Welcome email sent to new Google user");
+    } catch (emailErr) {
+      req.log.warn({ emailErr, email }, "Welcome email failed — account created successfully");
+    }
 
     res.status(201).json({
       user_id: newUser.id,
