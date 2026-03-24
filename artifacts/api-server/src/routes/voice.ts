@@ -20,6 +20,7 @@ const EDGE_VOICE_MAP: Record<string, string> = {
   echo: "en-US-GuyNeural",
   fable: "en-US-TonyNeural",
   sage: "en-US-DavisNeural",
+  verse: "en-US-TonyNeural",
 };
 
 async function synthesiseWithEdgeTTS(text: string, voice: string): Promise<Buffer> {
@@ -181,7 +182,7 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
+    const VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"];
     const safeVoice = VALID_VOICES.includes(voice || "") ? voice! : "nova";
     req.log.info({ voice: safeVoice }, "TTS request");
 
