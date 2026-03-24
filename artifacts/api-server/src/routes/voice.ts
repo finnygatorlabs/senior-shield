@@ -1,8 +1,39 @@
 import { Router, IRouter } from "express";
+import { createRequire } from "module";
 import { db } from "@workspace/db";
 import { voiceAssistanceHistoryTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
+
+const require = createRequire(import.meta.url);
+
+// Map our voice labels to Microsoft Edge Neural TTS voices
+// AriaNeural = warm, conversational female (like Sol/Maple)
+// DavisNeural = calm, deep male (like Cove/Spruce)
+const EDGE_VOICE_MAP: Record<string, string> = {
+  nova: "en-US-AriaNeural",
+  shimmer: "en-US-JennyNeural",
+  alloy: "en-US-AriaNeural",
+  ash: "en-US-JennyNeural",
+  coral: "en-US-JennyNeural",
+  onyx: "en-US-DavisNeural",
+  echo: "en-US-GuyNeural",
+  fable: "en-US-TonyNeural",
+  sage: "en-US-DavisNeural",
+};
+
+async function synthesiseWithEdgeTTS(text: string, voice: string): Promise<Buffer> {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
+  const edgeVoice = EDGE_VOICE_MAP[voice] || "en-US-AriaNeural";
+  const tts = new MsEdgeTTS();
+  await tts.setMetadata(edgeVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+  const stream = tts.toStream(text);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as any));
+  }
+  return Buffer.concat(chunks);
+}
 
 const router: IRouter = Router();
 
@@ -145,42 +176,51 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const openaiKey = process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-      res.status(503).json({ error: "TTS not configured" });
-      return;
-    }
-
     const VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
     const safeVoice = VALID_VOICES.includes(voice || "") ? voice! : "nova";
-    req.log.info({ voice: safeVoice, model: "tts-1-hd" }, "TTS request");
+    req.log.info({ voice: safeVoice }, "TTS request");
 
-    const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiKey}`,
-      },
-      body: JSON.stringify({
-        model: "tts-1-hd",
-        input: text.slice(0, 4096),
-        voice: safeVoice,
-        speed: 1.0,
-      }),
-    });
-
-    if (!ttsRes.ok) {
-      const err = await ttsRes.text();
-      req.log.error({ status: ttsRes.status, err }, "OpenAI TTS error");
-      res.status(502).json({ error: "TTS generation failed", detail: err.slice(0, 200) });
-      return;
+    // Try OpenAI TTS first (best quality) if the key looks valid
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey && openaiKey.startsWith("sk-")) {
+      try {
+        const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: "tts-1-hd",
+            input: text.slice(0, 4096),
+            voice: safeVoice,
+            speed: 1.0,
+          }),
+        });
+        if (ttsRes.ok) {
+          const arrayBuffer = await ttsRes.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString("base64");
+          req.log.info({ voice: safeVoice, engine: "openai" }, "TTS success");
+          res.json({ audio: base64, contentType: "audio/mpeg" });
+          return;
+        }
+        const errText = await ttsRes.text();
+        req.log.warn({ status: ttsRes.status, err: errText.slice(0, 120) }, "OpenAI TTS failed, falling back to Edge TTS");
+      } catch (e) {
+        req.log.warn({ err: e }, "OpenAI TTS error, falling back to Edge TTS");
+      }
     }
-    req.log.info({ voice: safeVoice, bytes: ttsRes.headers.get("content-length") }, "TTS success");
 
-    const arrayBuffer = await ttsRes.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-
-    res.json({ audio: base64, contentType: "audio/mpeg" });
+    // Edge TTS — free Microsoft neural voices, no API key required
+    try {
+      const audioBuffer = await synthesiseWithEdgeTTS(text.slice(0, 4000), safeVoice);
+      const base64 = audioBuffer.toString("base64");
+      req.log.info({ voice: safeVoice, engine: "edge-tts", bytes: audioBuffer.length }, "TTS success");
+      res.json({ audio: base64, contentType: "audio/mpeg" });
+    } catch (edgeErr) {
+      req.log.error({ err: edgeErr }, "Edge TTS also failed");
+      res.status(502).json({ error: "TTS generation failed" });
+    }
   } catch (err) {
     req.log.error({ err }, "TTS endpoint error");
     res.status(500).json({ error: "Internal Server Error" });
