@@ -8,8 +8,10 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
@@ -170,6 +172,7 @@ export default function HomeScreen() {
   // audioReady = false on iOS web until user taps (browser autoplay policy)
   const [audioReady, setAudioReady] = useState(Platform.OS !== "web");
   const [showMicModal, setShowMicModal] = useState(false);
+  const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
   const voiceMutedRef = useRef(false);
   useEffect(() => { voiceMutedRef.current = voiceMuted; }, [voiceMuted]);
@@ -642,6 +645,77 @@ export default function HomeScreen() {
         onTypeInstead={handleTypeInstead}
       />
 
+      {/* ── Switch apps & return info modal ── */}
+      <Modal visible={showSwitchModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSwitchModal(false)}>
+        <Pressable style={styles.switchOverlay} onPress={() => setShowSwitchModal(false)}>
+          <Pressable style={[styles.switchCard, { backgroundColor: theme.card }]} onPress={() => {}}>
+            {/* Gradient header */}
+            <LinearGradient colors={["#1E3A5F", "#2563EB"]} style={styles.switchHeader}>
+              <Ionicons name="swap-horizontal" size={28} color="#fff" />
+              <Text style={styles.switchHeaderTitle}>How to Leave &amp; Return</Text>
+            </LinearGradient>
+
+            <View style={styles.switchBody}>
+              <Text style={[styles.switchIntro, { color: theme.text }]}>
+                When {assistantName || "your assistant"} gives you phone instructions, follow these steps:
+              </Text>
+
+              {/* Step 1 */}
+              <View style={styles.switchStep}>
+                <View style={[styles.switchBadge, { backgroundColor: "#2563EB" }]}>
+                  <Text style={styles.switchBadgeNum}>1</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.switchStepTitle, { color: theme.text }]}>Leave SeniorShield</Text>
+                  <Text style={[styles.switchStepDesc, { color: theme.textSecondary }]}>
+                    Press the Home button (round button at the bottom of your phone) or swipe up from the bottom edge. SeniorShield stays open in the background.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Step 2 */}
+              <View style={styles.switchStep}>
+                <View style={[styles.switchBadge, { backgroundColor: "#16A34A" }]}>
+                  <Text style={styles.switchBadgeNum}>2</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.switchStepTitle, { color: theme.text }]}>Do your task</Text>
+                  <Text style={[styles.switchStepDesc, { color: theme.textSecondary }]}>
+                    Open Settings, Photos, or whatever app you need. Complete the step your assistant described.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Step 3 */}
+              <View style={styles.switchStep}>
+                <View style={[styles.switchBadge, { backgroundColor: "#7C3AED" }]}>
+                  <Text style={styles.switchBadgeNum}>3</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.switchStepTitle, { color: theme.text }]}>Come back</Text>
+                  <Text style={[styles.switchStepDesc, { color: theme.textSecondary }]}>
+                    Tap the SeniorShield icon on your home screen. Or double-press the Home button (or swipe up slowly and pause on newer phones) to see all open apps, then tap SeniorShield.
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[styles.switchNote, { color: theme.textSecondary, borderColor: theme.cardBorder }]}>
+                Your conversation and all the steps will still be right here when you return.
+              </Text>
+
+              <Pressable
+                onPress={() => setShowSwitchModal(false)}
+                style={styles.switchCloseBtn}
+              >
+                <LinearGradient colors={["#1E3A5F", "#2563EB"]} style={styles.switchCloseBtnInner}>
+                  <Text style={styles.switchCloseBtnText}>Got it!</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ── Header ── */}
       <PageHeader showTagline />
 
@@ -716,15 +790,39 @@ export default function HomeScreen() {
 
           {/* "Type instead" — visible before greeting (full orb) and when idle after greeting */}
           {!isListening && !isSpeaking && (
-            <Pressable
-              onPress={() => { stopListening(); stopSpeaking(); setShowText(true); }}
-              hitSlop={16}
-              style={styles.typeBtn}
-            >
-              <Text style={{ fontSize: ts.sm, color: theme.textSecondary, fontFamily: "Inter_400Regular", textDecorationLine: "underline" }}>
-                Type instead
-              </Text>
-            </Pressable>
+            <View style={{ alignItems: "center", gap: 10 }}>
+              <Pressable
+                onPress={() => { stopListening(); stopSpeaking(); setShowText(true); }}
+                hitSlop={16}
+                style={styles.typeBtn}
+              >
+                <Text style={{ fontSize: ts.sm, color: theme.textSecondary, fontFamily: "Inter_400Regular", textDecorationLine: "underline" }}>
+                  Type instead
+                </Text>
+              </Pressable>
+
+              {/* Switch-app tip — always visible so the user can reference it during tasks */}
+              <Pressable
+                onPress={() => setShowSwitchModal(true)}
+                hitSlop={10}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 20,
+                  backgroundColor: theme.card,
+                  borderWidth: 1,
+                  borderColor: theme.cardBorder,
+                }}
+              >
+                <Ionicons name="swap-horizontal-outline" size={15} color={theme.textSecondary} />
+                <Text style={{ fontSize: ts.xs ?? 11, color: theme.textSecondary, fontFamily: "Inter_400Regular" }}>
+                  How to switch apps &amp; return
+                </Text>
+              </Pressable>
+            </View>
           )}
 
           {/* ── Voice mute toggle — lower right ── */}
@@ -876,5 +974,60 @@ const styles = StyleSheet.create({
   sendBtn: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: "#2563EB",
     alignItems: "center", justifyContent: "center",
+  },
+
+  // Switch-apps modal
+  switchOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 20,
+  },
+  switchCard: {
+    width: "100%", maxWidth: 420, borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+  },
+  switchHeader: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 20, paddingVertical: 18,
+  },
+  switchHeaderTitle: {
+    fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff",
+  },
+  switchBody: {
+    padding: 20, gap: 14,
+  },
+  switchIntro: {
+    fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20, marginBottom: 4,
+  },
+  switchStep: {
+    flexDirection: "row", alignItems: "flex-start", gap: 14,
+  },
+  switchBadge: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: "center", justifyContent: "center", marginTop: 2,
+  },
+  switchBadgeNum: {
+    fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff",
+  },
+  switchStepTitle: {
+    fontSize: 15, fontFamily: "Inter_700Bold", marginBottom: 3,
+  },
+  switchStepDesc: {
+    fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19,
+  },
+  switchNote: {
+    fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18,
+    marginTop: 4, paddingTop: 12, borderTopWidth: 1,
+    fontStyle: "italic",
+  },
+  switchCloseBtn: {
+    borderRadius: 12, overflow: "hidden", marginTop: 4,
+  },
+  switchCloseBtnInner: {
+    paddingVertical: 13, alignItems: "center",
+  },
+  switchCloseBtnText: {
+    fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff",
   },
 });
