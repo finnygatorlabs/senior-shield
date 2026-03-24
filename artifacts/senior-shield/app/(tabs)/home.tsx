@@ -20,6 +20,24 @@ import FluidOrb from "@/components/FluidOrb";
 import PageHeader from "@/components/PageHeader";
 import MicPermissionModal from "@/components/MicPermissionModal";
 
+// Remove markdown formatting before sending text to TTS so the voice
+// never reads aloud characters like **, *, #, -, _, ~, backticks, etc.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")   // **bold**
+    .replace(/\*(.*?)\*/g, "$1")        // *italic*
+    .replace(/__(.*?)__/g, "$1")        // __bold__
+    .replace(/_(.*?)_/g, "$1")          // _italic_
+    .replace(/~~(.*?)~~/g, "$1")        // ~~strikethrough~~
+    .replace(/`{1,3}[^`]*`{1,3}/g, "") // `code` or ```code```
+    .replace(/^#{1,6}\s+/gm, "")        // # headings
+    .replace(/^\s*[-*+]\s+/gm, "")      // - bullet points
+    .replace(/^\s*\d+\.\s+/gm, "")      // 1. numbered lists
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [link text](url)
+    .replace(/[|>]/g, "")               // tables and block quotes
+    .trim();
+}
+
 interface Message {
   id: string;
   text: string;
@@ -113,8 +131,6 @@ export default function HomeScreen() {
     const d = process.env.EXPO_PUBLIC_DOMAIN;
     return d ? `https://${d}` : "";
   })();
-  const authH = { Authorization: `Bearer ${user?.token}` };
-
   // Female: nova (warm, human-like) | Male: onyx (deep, calm)
   const ttsVoice = prefs.preferred_voice === "female" ? "nova" : "onyx";
   // Ref always holds the latest voice so stale closures (e.g. inside SpeechRecognition) never use the wrong voice
@@ -143,6 +159,9 @@ export default function HomeScreen() {
   useEffect(() => { userRef.current = user; }, [user]);
   const historyRef = useRef<ConvTurn[]>([]);
   useEffect(() => { historyRef.current = history; }, [history]);
+  // speakTextRef lets sendMessage (captured inside startListening) always call the latest speakText
+  // even if sendMessage itself is a stale closure from an earlier render
+  const speakTextRef = useRef<(text: string, thenListen?: boolean) => void>(() => {});
 
   // ── TTS ──
   const speakText = useCallback(async (text: string, thenListen = false) => {
@@ -155,9 +174,10 @@ export default function HomeScreen() {
 
     if (Platform.OS === "web") {
       try {
+        const ttsToken = userRef.current?.token;
         const res = await fetch(`${apiBase}/api/voice/tts`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authH },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${ttsToken}` },
           body: JSON.stringify({ text: text.slice(0, 900), voice: ttsVoiceRef.current }),
         });
         if (res.ok) {
@@ -185,16 +205,18 @@ export default function HomeScreen() {
       } catch (e: any) {
         // If autoplay, try browser TTS
       }
-      // Browser TTS fallback
+      // Browser TTS fallback (only if OpenAI audio completely unavailable)
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
         utter.rate = 0.92;
         const voices = window.speechSynthesis.getVoices();
-        // Try to pick a clearly human voice based on gender
+        // Prefer en-US voices to avoid British/Australian accents (e.g. Daniel = British)
+        const usVoices = voices.filter(v => v.lang === "en-US");
+        const pool = usVoices.length > 0 ? usVoices : voices.filter(v => v.lang.startsWith("en"));
         const target = prefs.preferred_voice === "female"
-          ? voices.find(v => /female|woman|samantha|victoria|fiona|karen/i.test(v.name))
-          : voices.find(v => /male|man|daniel|alex|tom|arthur/i.test(v.name));
+          ? pool.find(v => /samantha|victoria|fiona|karen|zira|susan|female/i.test(v.name)) || pool[0]
+          : pool.find(v => /alex|tom|fred|mark|guy|male/i.test(v.name)) || pool[0];
         if (target) utter.voice = target;
         utter.onend = () => {
           setIsSpeaking(false);
@@ -205,9 +227,10 @@ export default function HomeScreen() {
       }
     } else {
       try {
+        const ttsToken = userRef.current?.token;
         const res = await fetch(`${apiBase}/api/voice/tts`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authH },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${ttsToken}` },
           body: JSON.stringify({ text: text.slice(0, 900), voice: ttsVoiceRef.current }),
         });
         if (res.ok) {
@@ -246,6 +269,8 @@ export default function HomeScreen() {
     setIsSpeaking(false);
     if (shouldListenAfterSpeak.current) startListening();
   }, [prefs.preferred_voice, apiBase, user?.token, ttsVoice]);
+  // Keep the ref pointing to the latest speakText after every re-creation
+  useEffect(() => { speakTextRef.current = speakText; }, [speakText]);
 
   const stopSpeaking = useCallback(() => {
     shouldListenAfterSpeak.current = false;
@@ -328,7 +353,7 @@ export default function HomeScreen() {
   function unlockAudio() {
     if (audioReady) return;
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      // Unlock Web Audio context (required for autoplay)
+      // 1. Unlock Web AudioContext (required for AudioContext.resume)
       try {
         const ctx = new (window as any).AudioContext();
         const buf = ctx.createBuffer(1, 1, 22050);
@@ -337,7 +362,17 @@ export default function HomeScreen() {
         src.connect(ctx.destination);
         src.start(0);
       } catch {}
-      // Pre-request microphone permission so iOS only shows the dialog once
+      // 2. Pre-bless the <audio> element autoplay during this user gesture.
+      //    iOS only allows el.play() later if a play() was called during a gesture.
+      //    Use the shortest valid silent MP3 (44 bytes) so it completes instantly.
+      try {
+        const SILENT_MP3 =
+          "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsgU291bmRzIE11c2ljIExpY2Vuc2UARlRZUEUAAAAHAAABiAAAAAQAAAAA";
+        const primer = new Audio(SILENT_MP3);
+        primer.volume = 0;
+        primer.play().catch(() => {});
+      } catch {}
+      // 3. Pre-request microphone permission so iOS only shows the dialog once
       if (navigator.mediaDevices?.getUserMedia) {
         navigator.mediaDevices
           .getUserMedia({ audio: true })
@@ -382,18 +417,19 @@ export default function HomeScreen() {
       if (res.status === 401) {
         const authErr = "It looks like your session expired. Please go to Settings and sign in again.";
         setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: authErr, isLoading: false } : m));
-        speakText(authErr, false);
+        speakTextRef.current(authErr, false);
         return;
       }
       const data = await res.json();
       const reply = data.response_text || "I'm sorry, could you repeat that?";
       setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: reply, isLoading: false } : m));
       setHistory([...updatedHistory, { role: "assistant", content: reply }]);
-      speakText(reply, true);
+      // Use ref so stale closures (captured inside startListening) always call the latest speakText
+      speakTextRef.current(stripMarkdown(reply), true);
     } catch {
       const err = "I couldn't connect just now. Please check your internet and try again.";
       setMessages(prev => prev.map(m => m.id === lid ? { ...m, text: err, isLoading: false } : m));
-      speakText(err, false);
+      speakTextRef.current(err, false);
     } finally {
       setIsSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
