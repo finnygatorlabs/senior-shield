@@ -582,14 +582,10 @@ export default function HomeScreen() {
 
   function handleOrbPress() {
     if (!audioReady) {
-      if (Platform.OS === "web") {
-        // Desktop/web: unlock audio directly on first tap — no modal needed.
-        // Desktop Chrome doesn't need the same blessing dance as iOS Safari.
-        unlockAudio();
-      } else {
-        // Native iOS/Android: show the branded permission modal
-        setShowMicModal(true);
-      }
+      // Always show the branded permission modal first — on all platforms.
+      // The modal's "Enable Voice" button then calls unlockAudio() which
+      // triggers the browser/OS mic permission prompt cleanly after a user gesture.
+      setShowMicModal(true);
       return;
     }
     if (isListening) { stopListening(); return; }

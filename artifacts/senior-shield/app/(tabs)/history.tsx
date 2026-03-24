@@ -7,8 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +15,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import PageHeader from "@/components/PageHeader";
+import ConfirmModal from "@/components/ConfirmModal";
 
 const getApiBase = () => {
   const d = process.env.EXPO_PUBLIC_DOMAIN;
@@ -97,29 +96,25 @@ function ConversationCard({
   onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const userMsgs = session.messages.filter((m) => m.role === "user");
   const preview = userMsgs[0]?.content || "Conversation";
 
-  function handleDelete() {
-    if (Platform.OS === "web") {
-      // Alert.alert multi-button doesn't work on web — use native confirm dialog
-      if ((window as any).confirm("Delete this conversation? This cannot be undone.")) {
-        onDelete(session.id);
-      }
-    } else {
-      Alert.alert(
-        "Delete Conversation",
-        "Are you sure you want to delete this conversation? This cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Delete", style: "destructive", onPress: () => onDelete(session.id) },
-        ]
-      );
-    }
-  }
-
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+      {/* Confirmation modal — rendered at card level, not inside any pressable */}
+      <ConfirmModal
+        visible={showConfirm}
+        title="Delete Conversation"
+        message="This conversation will be permanently removed. This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Keep It"
+        destructive
+        icon="trash-outline"
+        onConfirm={() => { setShowConfirm(false); onDelete(session.id); }}
+        onCancel={() => setShowConfirm(false)}
+      />
+
       {/* Header row: tap left area to expand, trash button sits outside as a sibling */}
       <View style={styles.cardHeader}>
         <Pressable
@@ -151,7 +146,7 @@ function ConversationCard({
           </View>
         </Pressable>
         {/* Delete button is a sibling of the expand pressable — no event bubbling */}
-        <Pressable onPress={handleDelete} hitSlop={12} style={styles.deleteBtn}>
+        <Pressable onPress={() => setShowConfirm(true)} hitSlop={12} style={styles.deleteBtn}>
           <Ionicons name="trash-outline" size={19} color={theme.textSecondary} />
         </Pressable>
       </View>
@@ -209,6 +204,7 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupToDelete, setGroupToDelete] = useState<DateGroup | null>(null);
 
   const apiBase = getApiBase();
 
@@ -252,38 +248,39 @@ export default function HistoryScreen() {
   }
 
   function deleteDayGroup(group: DateGroup) {
-    const doDelete = () => {
-      if (!user?.token) return;
-      const ids = group.sessions.map((s) => s.id);
-      setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
-      ids.forEach((id) => {
-        fetch(`${apiBase}/api/conversations/${id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${user.token!}` },
-        }).catch(() => {});
-      });
-    };
+    setGroupToDelete(group);
+  }
 
-    if (Platform.OS === "web") {
-      if ((window as any).confirm(`Delete all ${group.sessions.length} conversation${group.sessions.length === 1 ? "" : "s"} from ${group.label}? This cannot be undone.`)) {
-        doDelete();
-      }
-    } else {
-      Alert.alert(
-        `Delete All — ${group.label}`,
-        `Delete all ${group.sessions.length} conversation${group.sessions.length === 1 ? "" : "s"} from ${group.label}? This cannot be undone.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Delete All", style: "destructive", onPress: doDelete },
-        ]
-      );
-    }
+  function confirmDeleteGroup() {
+    if (!groupToDelete || !user?.token) return;
+    const ids = groupToDelete.sessions.map((s) => s.id);
+    setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
+    ids.forEach((id) => {
+      fetch(`${apiBase}/api/conversations/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user.token!}` },
+      }).catch(() => {});
+    });
+    setGroupToDelete(null);
   }
 
   const groups = groupByDate(sessions);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Batch-delete confirm modal */}
+      <ConfirmModal
+        visible={!!groupToDelete}
+        title={`Delete ${groupToDelete?.label}`}
+        message={`Remove all ${groupToDelete?.sessions.length ?? 0} conversation${(groupToDelete?.sessions.length ?? 0) === 1 ? "" : "s"} from ${groupToDelete?.label}? This cannot be undone.`}
+        confirmLabel="Delete All"
+        cancelLabel="Keep Them"
+        destructive
+        icon="trash-outline"
+        onConfirm={confirmDeleteGroup}
+        onCancel={() => setGroupToDelete(null)}
+      />
+
       <PageHeader />
 
       {loading ? (
