@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
+import { usePreferences } from "@/context/PreferencesContext";
 import PageHeader from "@/components/PageHeader";
 
 const getApiBase = () => {
@@ -188,7 +189,8 @@ function ConversationCard({
 }
 
 export default function HistoryScreen() {
-  const { theme, ts } = useTheme();
+  const { theme } = useTheme();
+  const { ts } = usePreferences();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();

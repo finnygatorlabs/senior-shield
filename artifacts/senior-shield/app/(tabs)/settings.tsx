@@ -81,8 +81,11 @@ export default function SettingsScreen() {
     return d ? `https://${d}` : "";
   })();
 
-  async function previewVoice(voice: TtsVoice) {
+  // Tap a voice card → select it immediately, then play a short preview sample
+  async function selectAndPreviewVoice(voice: TtsVoice) {
     if (previewingVoice) return;
+    // Immediately persist the selection
+    handlePrefChange("tts_voice", voice);
     setPreviewingVoice(voice);
     try {
       const res = await fetch(`${apiBase}/api/voice/tts`, {
@@ -225,10 +228,10 @@ export default function SettingsScreen() {
           ts={ts}
         />
 
-        {/* Voice screener — preview and select any voice for the current gender */}
+        {/* Voice screener — tap to select and preview */}
         <View style={[styles.voiceScreener, { borderTopColor: theme.border }]}>
           <Text style={[styles.voiceScreenerLabel, { color: theme.textSecondary, fontSize: ts.tiny }]}>
-            TRY A VOICE — TAP TO PREVIEW, HOLD TO SELECT
+            CHOOSE A VOICE — TAP TO SELECT &amp; HEAR A SAMPLE
           </Text>
           <View style={styles.voiceGrid}>
             {TTS_VOICES.filter(v => v.gender === prefs.preferred_voice).map(v => {
@@ -237,11 +240,7 @@ export default function SettingsScreen() {
               return (
                 <Pressable
                   key={v.value}
-                  onPress={() => previewVoice(v.value)}
-                  onLongPress={() => {
-                    handlePrefChange("tts_voice", v.value);
-                    hapticTap();
-                  }}
+                  onPress={() => selectAndPreviewVoice(v.value)}
                   style={[
                     styles.voiceCard,
                     {
@@ -255,7 +254,7 @@ export default function SettingsScreen() {
                       <ActivityIndicator size="small" color={isSelected ? "#FFF" : "#2563EB"} />
                     ) : (
                       <Ionicons
-                        name={isSelected ? "checkmark-circle" : "play-circle-outline"}
+                        name={isSelected ? "checkmark-circle" : "ellipse-outline"}
                         size={20}
                         color={isSelected ? "#FFF" : "#2563EB"}
                       />

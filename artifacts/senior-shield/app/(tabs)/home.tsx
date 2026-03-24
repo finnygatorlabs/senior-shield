@@ -186,9 +186,16 @@ export default function HomeScreen() {
   useEffect(() => { userRef.current = user; }, [user]);
   const historyRef = useRef<ConvTurn[]>([]);
   useEffect(() => { historyRef.current = history; }, [history]);
+  // State refs so recognition callbacks (stale closures) can always read current state
+  const isSendingRef = useRef(false);
+  useEffect(() => { isSendingRef.current = isSending; }, [isSending]);
+  const isSpeakingRef = useRef(false);
+  useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
   // speakTextRef lets sendMessage (captured inside startListening) always call the latest speakText
   // even if sendMessage itself is a stale closure from an earlier render
   const speakTextRef = useRef<(text: string, thenListen?: boolean) => void>(() => {});
+  // startListeningRef lets recognition onend/onerror auto-restart without a stale closure
+  const startListeningRef = useRef<() => void>(() => {});
   // Web Audio API — more reliable than HTML Audio in iframes (no autoplay policy issues)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioSrcNodeRef = useRef<AudioBufferSourceNode | null>(null);
@@ -365,10 +372,17 @@ export default function HomeScreen() {
   }, []);
 
   // ── Speech recognition ──
+  // conversationActiveRef: true while we're in an ongoing voice conversation.
+  // Drives the auto-restart loop: if recognition ends with no speech and the
+  // conversation is still active, we kick it off again so the user doesn't
+  // have to re-tap the orb every single exchange.
+  const conversationActiveRef = useRef(false);
+
   const startListening = useCallback(() => {
     const SR = getWebSpeech();
     if (!SR) { setShowText(true); return; }
     if (recognitionRef.current) return;
+    conversationActiveRef.current = true; // mark conversation as active
     try {
       const r = new SR();
       r.continuous = false;
@@ -392,7 +406,22 @@ export default function HomeScreen() {
         setIsListening(false);
         recognitionRef.current = null;
         setInterimText(prev => {
-          if (prev.trim()) { sendMessage(prev); return ""; }
+          if (prev.trim()) {
+            // User said something — send it and let the AI response cycle restart listening
+            sendMessage(prev);
+            return "";
+          }
+          // No speech captured. If conversation is still active (user hasn't stopped it)
+          // and we're not mid-send/speak, restart listening after a short pause so the
+          // user doesn't have to tap the orb again.
+          if (
+            conversationActiveRef.current &&
+            !isSendingRef.current &&
+            !isSpeakingRef.current &&
+            !voiceMutedRef.current
+          ) {
+            setTimeout(() => { startListeningRef.current(); }, 500);
+          }
           return "";
         });
       };
@@ -400,13 +429,29 @@ export default function HomeScreen() {
         setIsListening(false);
         recognitionRef.current = null;
         setInterimText("");
-        if (e.error !== "no-speech" && e.error !== "aborted") setShowText(true);
+        if (e.error === "no-speech" || e.error === "aborted") {
+          // Silence or interrupted — restart if conversation is still active
+          if (
+            conversationActiveRef.current &&
+            !isSendingRef.current &&
+            !isSpeakingRef.current &&
+            !voiceMutedRef.current
+          ) {
+            setTimeout(() => { startListeningRef.current(); }, 500);
+          }
+        } else {
+          // Real error (e.g. mic not allowed) — fall back to text input
+          setShowText(true);
+        }
       };
       r.start();
     } catch { setShowText(true); }
   }, []);
+  // Keep the ref current so auto-restart calls the latest version (avoids stale closures)
+  useEffect(() => { startListeningRef.current = startListening; }, [startListening]);
 
   const stopListening = useCallback(() => {
+    conversationActiveRef.current = false; // stop auto-restart loop
     shouldListenAfterSpeak.current = false;
     recognitionRef.current?.stop();
     recognitionRef.current = null;
