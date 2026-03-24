@@ -10,33 +10,36 @@ interface PageHeaderProps {
 }
 
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
+const H_PAD = 18;
 
 export default function PageHeader({ showTagline = false }: PageHeaderProps) {
   const { ts } = usePreferences();
   const insets = useSafeAreaInsets();
+
+  // Safe-area top + platform offset
+  const topOffset = insets.top + (Platform.OS === "web" ? 67 : 12);
+  // Logo is 58 px tall; badge (~26 px) raised 5 px above center = topOffset + (58/2 - 13 - 5) = topOffset + 11
+  const badgeTop = topOffset + 11;
 
   return (
     <LinearGradient
       colors={GRADIENT}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[
-        styles.wrapper,
-        { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) },
-      ]}
+      style={[styles.wrapper, { paddingTop: topOffset }]}
     >
+      {/* Logo + brand column — full remaining width, no badge competing */}
       <View style={styles.row}>
-        {/* Logo — background-stripped PNG, white checkmark intact */}
         <Image
           source={require("../assets/images/logo-shield.png")}
           style={styles.logo}
           resizeMode="contain"
         />
 
-        {/* Brand column: app name + tagline */}
+        {/* Brand column shifted 3 px left via reduced gap */}
         <View style={styles.brandCol}>
           <Text
-            style={[styles.appName, { fontSize: ts.h1 }]}
+            style={[styles.appName, { fontSize: ts.h1, paddingRight: 90 }]}
             numberOfLines={1}
             adjustsFontSizeToFit
           >
@@ -47,18 +50,18 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
               style={[styles.tagline, { fontSize: ts.xs }]}
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.68}
+              minimumFontScale={0.65}
             >
               Your voice assistant for tech help and scam protection
             </Text>
           )}
         </View>
+      </View>
 
-        {/* Protected — raised 5 px above center */}
-        <View style={[styles.badge, { marginBottom: 5 }]}>
-          <Ionicons name="shield-checkmark" size={11} color="#FFFFFF" />
-          <Text style={[styles.badgeText, { fontSize: ts.xs }]}>Protected</Text>
-        </View>
+      {/* Protected — absolutely positioned top-right, raised 5 px */}
+      <View style={[styles.badge, { top: badgeTop, right: H_PAD }]}>
+        <Ionicons name="shield-checkmark" size={11} color="#FFFFFF" />
+        <Text style={[styles.badgeText, { fontSize: ts.xs }]}>Protected</Text>
       </View>
     </LinearGradient>
   );
@@ -66,7 +69,7 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 18,
+    paddingHorizontal: H_PAD,
     paddingBottom: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 9,          // was 12 — shifts brand 3 px left
   },
   logo: {
     width: 58,
@@ -95,10 +98,11 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.80)",
+    color: "rgba(255,255,255,0.82)",
     lineHeight: 16,
   },
   badge: {
+    position: "absolute",
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -108,7 +112,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
-    flexShrink: 0,
   },
   badgeText: {
     fontFamily: "Inter_600SemiBold",
