@@ -151,9 +151,9 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const safeVoice = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"].includes(voice || "")
-      ? voice!
-      : "nova";
+    const VALID_VOICES = ["alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"];
+    const safeVoice = VALID_VOICES.includes(voice || "") ? voice! : "nova";
+    req.log.info({ voice: safeVoice, model: "tts-1-hd" }, "TTS request");
 
     const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
@@ -171,10 +171,11 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
 
     if (!ttsRes.ok) {
       const err = await ttsRes.text();
-      req.log.error({ err }, "OpenAI TTS error");
-      res.status(502).json({ error: "TTS generation failed" });
+      req.log.error({ status: ttsRes.status, err }, "OpenAI TTS error");
+      res.status(502).json({ error: "TTS generation failed", detail: err.slice(0, 200) });
       return;
     }
+    req.log.info({ voice: safeVoice, bytes: ttsRes.headers.get("content-length") }, "TTS success");
 
     const arrayBuffer = await ttsRes.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
