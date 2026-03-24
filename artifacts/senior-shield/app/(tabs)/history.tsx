@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,20 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/senior-shield`;
+const getApiBase = () => {
+  const d = process.env.EXPO_PUBLIC_DOMAIN;
+  return d ? `https://${d}` : "";
+};
 
 interface Message {
   role: string;
@@ -36,8 +40,12 @@ interface DateGroup {
 }
 
 function formatTime(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  } catch {
+    return "";
+  }
 }
 
 function groupByDate(sessions: Session[]): DateGroup[] {
@@ -48,21 +56,25 @@ function groupByDate(sessions: Session[]): DateGroup[] {
 
   const map = new Map<string, Session[]>();
   for (const s of sessions) {
-    const d = new Date(s.started_at);
-    d.setHours(0, 0, 0, 0);
-    const key = d.toDateString();
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(s);
+    try {
+      const d = new Date(s.started_at);
+      d.setHours(0, 0, 0, 0);
+      const key = d.toDateString();
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    } catch {}
   }
 
   const groups: DateGroup[] = [];
   for (const [key, items] of map) {
-    const d = new Date(key);
-    let label: string;
-    if (d.getTime() === today.getTime()) label = "Today";
-    else if (d.getTime() === yesterday.getTime()) label = "Yesterday";
-    else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    groups.push({ label, sessions: items });
+    try {
+      const d = new Date(key);
+      let label: string;
+      if (d.getTime() === today.getTime()) label = "Today";
+      else if (d.getTime() === yesterday.getTime()) label = "Yesterday";
+      else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      groups.push({ label, sessions: items });
+    } catch {}
   }
 
   return groups.sort(
@@ -76,30 +88,47 @@ function ConversationCard({
   session,
   theme,
   ts,
+  onDelete,
 }: {
   session: Session;
   theme: any;
   ts: any;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const userMsgs = session.messages.filter((m) => m.role === "user");
-  const assistantMsgs = session.messages.filter((m) => m.role === "assistant");
   const preview = userMsgs[0]?.content || "Conversation";
+
+  function handleDelete() {
+    Alert.alert(
+      "Delete Conversation",
+      "Are you sure you want to delete this conversation? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => onDelete(session.id) },
+      ]
+    );
+  }
 
   return (
     <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
       <Pressable
         onPress={() => setExpanded((v) => !v)}
         style={styles.cardHeader}
-        hitSlop={6}
+        hitSlop={4}
       >
-        <View style={styles.cardMeta}>
+        <View style={styles.cardMetaRow}>
           <Text style={[styles.cardTime, { color: theme.textSecondary, fontSize: ts.xs }]}>
             {formatTime(session.started_at)}
           </Text>
-          <Text style={[styles.cardCount, { color: theme.textSecondary, fontSize: ts.xs }]}>
-            {userMsgs.length} {userMsgs.length === 1 ? "question" : "questions"}
-          </Text>
+          <View style={styles.cardHeaderRight}>
+            <Text style={[styles.cardCount, { color: theme.textSecondary, fontSize: ts.xs }]}>
+              {userMsgs.length} {userMsgs.length === 1 ? "question" : "questions"}
+            </Text>
+            <Pressable onPress={handleDelete} hitSlop={10} style={styles.deleteBtn}>
+              <Ionicons name="trash-outline" size={17} color={theme.textSecondary} />
+            </Pressable>
+          </View>
         </View>
         <View style={styles.cardPreviewRow}>
           <Text
@@ -112,7 +141,7 @@ function ConversationCard({
             name={expanded ? "chevron-up" : "chevron-down"}
             size={20}
             color={theme.textSecondary}
-            style={{ marginLeft: 8, marginTop: 2 }}
+            style={{ marginLeft: 8, marginTop: 2, flexShrink: 0 }}
           />
         </View>
       </Pressable>
@@ -124,10 +153,7 @@ function ConversationCard({
             return (
               <View
                 key={idx}
-                style={[
-                  styles.msgRow,
-                  isUser ? styles.msgRowUser : styles.msgRowAssistant,
-                ]}
+                style={[styles.msgRow, isUser ? styles.msgRowUser : styles.msgRowAssistant]}
               >
                 {!isUser && (
                   <View style={[styles.avatarIcon, { backgroundColor: "#2563EB" }]}>
@@ -147,7 +173,7 @@ function ConversationCard({
                       color: isUser ? "#FFF" : theme.text,
                       fontFamily: "Inter_400Regular",
                       fontSize: ts.sm,
-                      lineHeight: ts.sm * 1.5,
+                      lineHeight: ts.sm * 1.55,
                     }}
                   >
                     {msg.content}
@@ -173,26 +199,28 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const apiBase = getApiBase();
+
   const fetchSessions = useCallback(
     async (isRefresh = false) => {
       if (!user?.token) return;
       if (!isRefresh) setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/api/conversations`, {
+        const res = await fetch(`${apiBase}/api/conversations`, {
           headers: { Authorization: `Bearer ${user.token}` },
         });
-        if (!res.ok) throw new Error("Failed to load history");
+        if (!res.ok) throw new Error("Failed to load");
         const data = await res.json();
-        setSessions(data);
+        setSessions(Array.isArray(data) ? data : []);
       } catch {
-        setError("Couldn't load your conversation history. Please try again.");
+        setError("Couldn't load your conversation history. Pull down to try again.");
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [user?.token]
+    [user?.token, apiBase]
   );
 
   useFocusEffect(
@@ -200,6 +228,44 @@ export default function HistoryScreen() {
       fetchSessions();
     }, [fetchSessions])
   );
+
+  async function deleteSession(id: string) {
+    if (!user?.token) return;
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    try {
+      await fetch(`${apiBase}/api/conversations/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+    } catch {
+      fetchSessions();
+    }
+  }
+
+  function deleteDayGroup(group: DateGroup) {
+    Alert.alert(
+      `Delete All — ${group.label}`,
+      `Delete all ${group.sessions.length} conversation${group.sessions.length === 1 ? "" : "s"} from ${group.label}? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete All",
+          style: "destructive",
+          onPress: () => {
+            if (!user?.token) return;
+            const ids = group.sessions.map((s) => s.id);
+            setSessions((prev) => prev.filter((s) => !ids.includes(s.id)));
+            ids.forEach((id) => {
+              fetch(`${apiBase}/api/conversations/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${user.token!}` },
+              }).catch(() => {});
+            });
+          },
+        },
+      ]
+    );
+  }
 
   const groups = groupByDate(sessions);
 
@@ -232,16 +298,11 @@ export default function HistoryScreen() {
       ) : sessions.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="chatbubble-ellipses-outline" size={56} color={theme.textSecondary} />
-          <Text
-            style={[styles.emptyTitle, { color: theme.text, fontSize: ts.lg }]}
-          >
+          <Text style={[styles.emptyTitle, { color: theme.text, fontSize: ts.lg }]}>
             No conversations yet
           </Text>
-          <Text
-            style={[styles.emptyText, { color: theme.textSecondary, fontSize: ts.base }]}
-          >
-            Your conversations with your assistant will appear here so you can read them
-            again any time.
+          <Text style={[styles.emptyText, { color: theme.textSecondary, fontSize: ts.base }]}>
+            Your conversations will appear here so you can read them again any time.
           </Text>
         </View>
       ) : (
@@ -264,24 +325,35 @@ export default function HistoryScreen() {
         >
           {groups.map((group) => (
             <View key={group.label}>
-              <Text
-                style={[styles.dateLabel, { color: theme.textSecondary, fontSize: ts.xs }]}
-              >
-                {group.label}
-              </Text>
+              {/* Date header with "Clear all" for the group */}
+              <View style={styles.groupHeader}>
+                <Text style={[styles.dateLabel, { color: theme.textSecondary, fontSize: ts.xs }]}>
+                  {group.label}
+                </Text>
+                <Pressable
+                  onPress={() => deleteDayGroup(group)}
+                  hitSlop={10}
+                  style={styles.clearDayBtn}
+                >
+                  <Text style={{ color: theme.textSecondary, fontFamily: "Inter_400Regular", fontSize: ts.xs }}>
+                    Clear all
+                  </Text>
+                </Pressable>
+              </View>
+
               {group.sessions.map((session) => (
                 <ConversationCard
                   key={session.id}
                   session={session}
                   theme={theme}
                   ts={ts}
+                  onDelete={deleteSession}
                 />
               ))}
             </View>
           ))}
-          <Text
-            style={[styles.retentionNote, { color: theme.textSecondary, fontSize: ts.xs }]}
-          >
+
+          <Text style={[styles.retentionNote, { color: theme.textSecondary, fontSize: ts.xs }]}>
             Conversations are saved for 30 days
           </Text>
         </ScrollView>
@@ -311,7 +383,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: "Inter_400Regular",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 26,
   },
   retryBtn: {
     borderRadius: 12,
@@ -321,16 +393,25 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 6,
+    paddingTop: 4,
+    gap: 0,
+  },
+  groupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    marginBottom: 8,
+    paddingHorizontal: 4,
   },
   dateLabel: {
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.8,
     textTransform: "uppercase",
-    marginTop: 16,
-    marginBottom: 8,
-    marginLeft: 4,
+  },
+  clearDayBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   card: {
     borderRadius: 16,
@@ -341,16 +422,25 @@ const styles = StyleSheet.create({
   cardHeader: {
     padding: 14,
   },
-  cardMeta: {
+  cardMetaRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 6,
+  },
+  cardHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   cardTime: {
     fontFamily: "Inter_500Medium",
   },
   cardCount: {
     fontFamily: "Inter_400Regular",
+  },
+  deleteBtn: {
+    padding: 4,
   },
   cardPreviewRow: {
     flexDirection: "row",
@@ -369,6 +459,7 @@ const styles = StyleSheet.create({
   msgRow: {
     flexDirection: "row",
     alignItems: "flex-end",
+    marginBottom: 6,
   },
   msgRowUser: {
     justifyContent: "flex-end",
@@ -403,6 +494,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 4,
   },
 });
