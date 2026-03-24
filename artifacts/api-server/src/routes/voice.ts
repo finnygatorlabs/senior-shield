@@ -19,7 +19,7 @@ const EDGE_VOICE_MAP: Record<string, string> = {
   onyx: "en-US-DavisNeural",
   echo: "en-US-GuyNeural",
   fable: "en-US-TonyNeural",
-  sage: "en-US-DavisNeural",
+  sage: "en-US-AriaNeural",
   verse: "en-US-TonyNeural",
 };
 

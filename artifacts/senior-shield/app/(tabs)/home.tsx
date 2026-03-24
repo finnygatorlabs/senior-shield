@@ -474,25 +474,22 @@ export default function HomeScreen() {
     if (!greeted && audioReady && assistantName) setGreeted(true);
   }, [assistantName, audioReady]);
 
-  // ── Unlock audio on first user tap (iOS Safari) ──
+  // ── Unlock audio on first user tap ──
+  // On web, the AudioContext is pre-created in handleOrbPress (during the tap gesture).
+  // This function just marks audio as ready and, if the context doesn't exist yet
+  // (e.g. on native), creates it. Safe to call multiple times.
   function unlockAudio() {
     if (audioReady) return;
-    if (Platform.OS === "web" && typeof window !== "undefined") {
+    if (Platform.OS === "web" && typeof window !== "undefined" && !audioCtxRef.current) {
       try {
-        // Create and store the AudioContext during this user gesture — this unlocks it.
-        // Web Audio API is not subject to iframe autoplay restrictions once the context
-        // is created within a user gesture, making it far more reliable than HTML Audio.
         const ctx = new (window as any).AudioContext();
         audioCtxRef.current = ctx;
-        // Play a silent 1-sample buffer to activate the context immediately
         const silentBuf = ctx.createBuffer(1, 1, 22050);
         const silentSrc = ctx.createBufferSource();
         silentSrc.buffer = silentBuf;
         silentSrc.connect(ctx.destination);
         silentSrc.start(0);
       } catch {}
-      // Note: mic permission is handled by the Web Speech API when startListening() fires.
-      // Do NOT call getUserMedia here — that would produce a redundant second OS dialog.
     }
     setAudioReady(true);
   }
@@ -577,9 +574,23 @@ export default function HomeScreen() {
 
   function handleOrbPress() {
     if (!audioReady) {
-      // Always show the branded permission modal first — on all platforms.
-      // The modal's "Enable Voice" button then calls unlockAudio() which
-      // triggers the browser/OS mic permission prompt cleanly after a user gesture.
+      // On web, create the AudioContext RIGHT NOW during this orb-tap gesture.
+      // Chrome requires the AudioContext to be created synchronously within a user
+      // gesture — doing it later inside a modal button loses the gesture context.
+      if (Platform.OS === "web" && typeof window !== "undefined" && !audioCtxRef.current) {
+        try {
+          const ctx = new (window as any).AudioContext();
+          audioCtxRef.current = ctx;
+          // Play a silent buffer to immediately put the context in "running" state
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch {}
+      }
+      // Show the branded modal on all platforms — it acts as the informed-consent
+      // step before the browser's own mic permission dialog.
       setShowMicModal(true);
       return;
     }
