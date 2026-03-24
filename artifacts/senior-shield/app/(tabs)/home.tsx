@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import FluidOrb from "@/components/FluidOrb";
 import PageHeader from "@/components/PageHeader";
+import MicPermissionModal from "@/components/MicPermissionModal";
 
 interface Message {
   id: string;
@@ -131,6 +132,7 @@ export default function HomeScreen() {
   const [greeted, setGreeted] = useState(false);
   // audioReady = false on iOS web until user taps (browser autoplay policy)
   const [audioReady, setAudioReady] = useState(Platform.OS !== "web");
+  const [showMicModal, setShowMicModal] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const recognitionRef = useRef<any>(null);
@@ -385,11 +387,26 @@ export default function HomeScreen() {
   }
 
   function handleOrbPress() {
-    if (!audioReady) { unlockAudio(); return; }
+    if (!audioReady) {
+      // Show branded permission modal instead of raw browser popup
+      setShowMicModal(true);
+      return;
+    }
     if (isListening) { stopListening(); return; }
     if (isSpeaking) { stopSpeaking(); startListening(); return; }
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startListening();
+  }
+
+  function handleEnableVoice() {
+    setShowMicModal(false);
+    unlockAudio(); // triggers iOS system permission prompt + unlocks audio
+  }
+
+  function handleTypeInstead() {
+    setShowMicModal(false);
+    setShowText(true);
+    setAudioReady(true); // skip voice flow entirely
   }
 
   // ── Status labels ──
@@ -408,6 +425,14 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* ── Mic permission modal ── */}
+      <MicPermissionModal
+        visible={showMicModal}
+        assistantName={assistantName || "your assistant"}
+        onEnable={handleEnableVoice}
+        onTypeInstead={handleTypeInstead}
+      />
+
       {/* ── Header ── */}
       <PageHeader showTagline />
 
