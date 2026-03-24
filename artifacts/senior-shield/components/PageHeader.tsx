@@ -21,7 +21,12 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
         {
           paddingTop: insets.top + (Platform.OS === "web" ? 67 : 10),
           borderBottomColor: theme.border,
-          backgroundColor: theme.background,
+          backgroundColor: theme.card,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 3,
         },
       ]}
     >
@@ -56,8 +61,8 @@ export default function PageHeader({ showTagline = false }: PageHeaderProps) {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 18,
-    paddingBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
   },
   row: {
     flexDirection: "row",

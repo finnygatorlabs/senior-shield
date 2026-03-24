@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   settingText: { flex: 1 },
   settingLabel: { fontFamily: "Inter_500Medium" },
   settingSubtitle: { fontFamily: "Inter_400Regular", marginTop: 2 },
-  nameInput: { fontFamily: "Inter_500Medium", borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, minWidth: 80, textAlign: "center" },
+  nameInput: { fontFamily: "Inter_500Medium", borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, width: 100, flexShrink: 0, textAlign: "center" },
   logoutButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 16, borderWidth: 1, paddingVertical: 16 },
   logoutText: { fontFamily: "Inter_600SemiBold", color: "#EF4444" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
