@@ -118,10 +118,7 @@ export default function FamilyScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <PageHeader
-        pageTitle="Family Alerts"
-        pageSubtitle="They get notified if we detect a scam"
-      />
+      <PageHeader />
       <ScrollView
         contentContainerStyle={[
           styles.content,

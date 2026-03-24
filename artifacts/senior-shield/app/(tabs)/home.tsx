@@ -17,6 +17,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import FluidOrb from "@/components/FluidOrb";
+import PageHeader from "@/components/PageHeader";
 
 interface Message {
   id: string;
@@ -320,6 +321,7 @@ export default function HomeScreen() {
   function unlockAudio() {
     if (audioReady) return;
     if (Platform.OS === "web" && typeof window !== "undefined") {
+      // Unlock Web Audio context (required for autoplay)
       try {
         const ctx = new (window as any).AudioContext();
         const buf = ctx.createBuffer(1, 1, 22050);
@@ -328,6 +330,13 @@ export default function HomeScreen() {
         src.connect(ctx.destination);
         src.start(0);
       } catch {}
+      // Pre-request microphone permission so iOS only shows the dialog once
+      if (navigator.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => stream.getTracks().forEach((t) => t.stop()))
+          .catch(() => {});
+      }
     }
     setAudioReady(true);
   }
@@ -392,7 +401,7 @@ export default function HomeScreen() {
     ? "Tap to start"
     : "Tap to speak";
 
-  const firstName = user?.first_name || "Friend";
+
   const orbBottomPad = tabBarHeight + insets.bottom + 8;
   // Footer height: statusLabel (24) + gap (14) + orb (220) + gap (18) + typeBtn (22) + padding (20)
   const ORB_FOOTER_HEIGHT = 24 + 14 + 176 + 18 + 22 + 20;
@@ -400,16 +409,7 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 8) }]}>
-        <View>
-          <Text style={[styles.greeting, { color: theme.textSecondary, fontSize: ts.xs }]}>Good day,</Text>
-          <Text style={[styles.name, { color: theme.text, fontSize: ts.h2 }]}>{firstName}</Text>
-        </View>
-        <View style={[styles.shieldBadge, { backgroundColor: "#DBEAFE" }]}>
-          <Ionicons name="shield-checkmark" size={14} color="#2563EB" />
-          <Text style={{ fontSize: ts.xs, fontFamily: "Inter_600SemiBold", color: "#2563EB" }}>Protected</Text>
-        </View>
-      </View>
+      <PageHeader showTagline />
 
       {/* ── Messages ── */}
       <ScrollView
@@ -540,16 +540,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingBottom: 10,
-  },
-  greeting: { fontFamily: "Inter_400Regular" },
-  name: { fontFamily: "Inter_700Bold" },
-  shieldBadge: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20,
-  },
   messages: { flex: 1 },
   msgsContent: { paddingHorizontal: 12, paddingTop: 8, gap: 6 },
   userRow: { alignItems: "flex-end" },

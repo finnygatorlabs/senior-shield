@@ -133,7 +133,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-    <PageHeader pageTitle="Settings" />
+    <PageHeader />
     <ScrollView
       contentContainerStyle={[
         styles.content,

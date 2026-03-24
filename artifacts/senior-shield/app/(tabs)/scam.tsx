@@ -117,10 +117,7 @@ export default function ScamScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <PageHeader
-        pageTitle="Scam Detector"
-        pageSubtitle="Paste a suspicious message and I'll check if it's a scam"
-      />
+      <PageHeader />
     <ScrollView
       contentContainerStyle={[
         styles.content,
