@@ -150,6 +150,8 @@ export default function HomeScreen() {
   const { prefs, ts } = usePreferences();
 
   const assistantName = prefs.assistant_name;
+  const assistantNameRef = useRef(assistantName);
+  useEffect(() => { assistantNameRef.current = assistantName; }, [assistantName]);
 
   // Time-of-day greeting shown in the header
   const headerGreeting = (() => {
@@ -197,9 +199,9 @@ export default function HomeScreen() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const shouldListenAfterSpeak = useRef(false);
-  // Consecutive no-speech restart counter — capped to prevent infinite "Listening…" loop on mobile
+  // Tracks whether we've already triggered the silence prompt to avoid double-fire
+  // (onerror no-speech always fires onend right after, so we set this before onend runs)
   const noSpeechRetryRef = useRef(0);
-  const MAX_NO_SPEECH_RETRIES = 4; // ~30 seconds max before giving up
   // Always holds latest values so stale closures (e.g. inside startListening) never read old state
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -561,24 +563,25 @@ export default function HomeScreen() {
         setInterimText(prev => {
           if (prev.trim()) {
             // Silence timer fired (or recognition ended naturally) — send what was said
-            noSpeechRetryRef.current = 0; // successful exchange — reset counter
+            noSpeechRetryRef.current = 0;
             sendMessage(prev);
             return "";
           }
-          // Nothing was said — restart only if under the retry cap
-          if (
-            conversationActiveRef.current &&
-            !isSendingRef.current &&
-            !isSpeakingRef.current &&
-            !voiceMutedRef.current &&
-            noSpeechRetryRef.current < MAX_NO_SPEECH_RETRIES
-          ) {
-            noSpeechRetryRef.current += 1;
-            setTimeout(() => { startListeningRef.current(); }, 500);
-          } else if (noSpeechRetryRef.current >= MAX_NO_SPEECH_RETRIES) {
-            // Gave up after ~30 s of silence — reset so the user can tap again
-            noSpeechRetryRef.current = 0;
+          // Nothing was heard. If conversationActive is still true here it means
+          // we got here WITHOUT a preceding no-speech onerror (some browsers skip
+          // the error and fire onend directly). Speak the idle prompt once and stop.
+          if (conversationActiveRef.current && !isSendingRef.current && !isSpeakingRef.current) {
             conversationActiveRef.current = false;
+            noSpeechRetryRef.current = 0;
+            if (!voiceMutedRef.current) {
+              const name = assistantNameRef.current || "I";
+              setTimeout(() => {
+                speakTextRef.current(
+                  `${name} is still here! Tap the orb whenever you're ready to speak.`,
+                  false
+                );
+              }, 300);
+            }
           }
           return "";
         });
@@ -590,23 +593,23 @@ export default function HomeScreen() {
         if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
         setInterimText("");
         if (e.error === "no-speech" || e.error === "aborted") {
-          // No speech detected — restart only if under the retry cap
-          if (
-            conversationActiveRef.current &&
-            !isSendingRef.current &&
-            !isSpeakingRef.current &&
-            !voiceMutedRef.current &&
-            noSpeechRetryRef.current < MAX_NO_SPEECH_RETRIES
-          ) {
-            noSpeechRetryRef.current += 1;
-            setTimeout(() => { startListeningRef.current(); }, 500);
-          } else {
-            // Cap reached — stop the loop, user can tap the orb to try again
-            noSpeechRetryRef.current = 0;
+          if (conversationActiveRef.current && !isSendingRef.current && !isSpeakingRef.current) {
+            // Stop the loop immediately so the onend that follows this error does nothing
             conversationActiveRef.current = false;
+            noSpeechRetryRef.current = 0;
+            // Speak a friendly idle prompt then leave the orb idle for the user to tap
+            if (!voiceMutedRef.current) {
+              const name = assistantNameRef.current || "I";
+              setTimeout(() => {
+                speakTextRef.current(
+                  `${name} is still here! Tap the orb whenever you're ready to speak.`,
+                  false
+                );
+              }, 300);
+            }
           }
         } else {
-          // Real error (mic denied, etc.) — fall back to text input
+          // Real error (mic denied, network, etc.) — fall back to text input
           setShowText(true);
         }
       };
