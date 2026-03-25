@@ -191,6 +191,7 @@ export default function HomeScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const shouldListenAfterSpeak = useRef(false);
   // Always holds latest values so stale closures (e.g. inside startListening) never read old state
@@ -486,38 +487,59 @@ export default function HomeScreen() {
     const SR = getWebSpeech();
     if (!SR) { setShowText(true); return; }
     if (recognitionRef.current) return;
-    conversationActiveRef.current = true; // mark conversation as active
+    conversationActiveRef.current = true;
+
+    // Clear any leftover silence timer from a previous session
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+
     try {
       const r = new SR();
-      r.continuous = false;
+      // continuous = true keeps the mic open until WE decide to stop it.
+      // This means seniors can pause mid-sentence without being cut off —
+      // we only send after 3 full seconds of silence.
+      r.continuous = true;
       r.interimResults = true;
       r.lang = "en-US";
       recognitionRef.current = r;
+
       r.onstart = () => {
         setIsListening(true);
         setInterimText("");
         if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       };
+
       r.onresult = (e: any) => {
-        let interim = "", final = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const t = e.results[i][0].transcript;
-          if (e.results[i].isFinal) final += t; else interim += t;
+        // Build the complete running transcript: all confirmed final segments +
+        // the current interim segment. This prevents text from disappearing
+        // mid-utterance and gives seniors a full view of what was heard.
+        let confirmed = "";
+        let current = "";
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) confirmed += e.results[i][0].transcript;
+          else current = e.results[i][0].transcript;
         }
-        setInterimText(final || interim);
+        setInterimText(confirmed + current);
+
+        // Reset the 3-second silence timer on every new word detected.
+        // Only after 3 consecutive seconds of no speech do we stop and send.
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          silenceTimerRef.current = null;
+          recognitionRef.current?.stop(); // triggers onend → sendMessage
+        }, 3000);
       };
+
       r.onend = () => {
         setIsListening(false);
         recognitionRef.current = null;
+        if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
         setInterimText(prev => {
           if (prev.trim()) {
-            // User said something — send it and let the AI response cycle restart listening
+            // Silence timer fired (or recognition ended naturally) — send what was said
             sendMessage(prev);
             return "";
           }
-          // No speech captured. If conversation is still active (user hasn't stopped it)
-          // and we're not mid-send/speak, restart listening after a short pause so the
-          // user doesn't have to tap the orb again.
+          // Nothing was said — keep the conversation alive by restarting the mic
           if (
             conversationActiveRef.current &&
             !isSendingRef.current &&
@@ -529,12 +551,14 @@ export default function HomeScreen() {
           return "";
         });
       };
+
       r.onerror = (e: any) => {
         setIsListening(false);
         recognitionRef.current = null;
+        if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
         setInterimText("");
         if (e.error === "no-speech" || e.error === "aborted") {
-          // Silence or interrupted — restart if conversation is still active
+          // No speech detected at all — restart mic so user doesn't have to tap again
           if (
             conversationActiveRef.current &&
             !isSendingRef.current &&
@@ -544,10 +568,11 @@ export default function HomeScreen() {
             setTimeout(() => { startListeningRef.current(); }, 500);
           }
         } else {
-          // Real error (e.g. mic not allowed) — fall back to text input
+          // Real error (mic denied, etc.) — fall back to text input
           setShowText(true);
         }
       };
+
       r.start();
     } catch { setShowText(true); }
   }, []);
@@ -557,6 +582,7 @@ export default function HomeScreen() {
   const stopListening = useCallback(() => {
     conversationActiveRef.current = false; // stop auto-restart loop
     shouldListenAfterSpeak.current = false;
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     recognitionRef.current?.stop();
     recognitionRef.current = null;
     setIsListening(false);
