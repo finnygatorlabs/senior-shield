@@ -178,8 +178,11 @@ export default function HomeScreen() {
   const [interimText, setInterimText] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [greeted, setGreeted] = useState(false);
-  // audioReady = false on iOS web until user taps (browser autoplay policy)
+  // audioReady = false on web until the AudioContext is created on first user tap
   const [audioReady, setAudioReady] = useState(Platform.OS !== "web");
+  // micPermissionGranted = mic permission was already granted in a previous session.
+  // Separate from audioReady: we can skip the consent modal without having an AudioContext yet.
+  const [micPermissionGranted, setMicPermissionGranted] = useState(Platform.OS !== "web");
   const [showMicModal, setShowMicModal] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
@@ -222,6 +225,8 @@ export default function HomeScreen() {
   const scheduledNodesRef = useRef<AudioBufferSourceNode[]>([]);
   // Callback invoked when each TTS chunk finishes — either plays next chunk or ends session
   const onTtsDoneRef = useRef<() => void>(() => {});
+  // Native expo-av Sound ref — keeps it alive (prevents GC) and lets stopSpeaking() cancel it
+  const nativeSoundRef = useRef<any>(null);
 
   // ── TTS ──
   const speakText = useCallback(async (text: string, thenListen = false) => {
@@ -265,6 +270,8 @@ export default function HomeScreen() {
           // Use Web Audio API — works reliably in iframes where HTML Audio.play() is blocked
           const ctx = audioCtxRef.current;
           if (!ctx) { setIsSpeaking(false); return; }
+          // Resume if the browser suspended the context (e.g. phone backgrounded / screen locked)
+          if (ctx.state === "suspended") { try { await ctx.resume(); } catch {} }
 
           // Stop any currently playing source node
           if (audioSrcNodeRef.current) {
@@ -318,8 +325,11 @@ export default function HomeScreen() {
             { uri: `data:audio/mpeg;base64,${audio}` },
             { shouldPlay: true }
           );
+          // Store in ref so stopSpeaking() can cancel it and GC can't collect it mid-playback
+          nativeSoundRef.current = sound;
           sound.setOnPlaybackStatusUpdate((s: any) => {
             if (s.didJustFinish) {
+              nativeSoundRef.current = null;
               sound.unloadAsync();
               onTtsDoneRef.current(); // chain next sentence chunk or finish
             }
@@ -376,6 +386,11 @@ export default function HomeScreen() {
 
     const ctx = audioCtxRef.current;
     if (!ctx) { setIsSpeaking(false); return; }
+    // Resume if the browser suspended the context (phone backgrounded / screen locked)
+    if (ctx.state === "suspended") {
+      try { await ctx.resume(); } catch {}
+      if (callId !== ttsCallIdRef.current) return;
+    }
 
     try {
       const token = userRef.current?.token;
@@ -469,8 +484,12 @@ export default function HomeScreen() {
         audioSrcNodeRef.current = null;
       }
     } else {
-      audioRef.current?.pause();
-      audioRef.current = null;
+      // Stop and unload any playing expo-av sound
+      if (nativeSoundRef.current) {
+        const s = nativeSoundRef.current;
+        nativeSoundRef.current = null;
+        s.stopAsync().then(() => s.unloadAsync()).catch(() => {});
+      }
       import("expo-speech").then(m => m.default.stop()).catch(() => {});
     }
     setIsSpeaking(false);
@@ -630,17 +649,30 @@ export default function HomeScreen() {
   }, []);
 
   // On web, check if mic permission was already granted in a previous session.
-  // If so, mark audioReady immediately so the user never sees our consent modal
-  // again and can tap the orb to go straight to listening.
+  // If so, set micPermissionGranted so the consent modal is skipped on the next orb tap.
+  // We do NOT set audioReady here — the AudioContext is only created on the first tap.
   useEffect(() => {
     if (Platform.OS !== "web" || typeof navigator === "undefined") return;
     if (!navigator.permissions) return;
     navigator.permissions
       .query({ name: "microphone" as PermissionName })
       .then(result => {
-        if (result.state === "granted") setAudioReady(true);
+        if (result.state === "granted") setMicPermissionGranted(true);
       })
       .catch(() => {});
+  }, []);
+
+  // Auto-resume suspended AudioContext when the tab returns to the foreground.
+  // Mobile browsers suspend audio contexts when the page is backgrounded.
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const resume = () => {
+      if (audioCtxRef.current?.state === "suspended") {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", resume);
+    return () => document.removeEventListener("visibilitychange", resume);
   }, []);
 
   // ── Send message ──
@@ -736,7 +768,14 @@ export default function HomeScreen() {
       } catch {}
     }
     if (!audioReady) {
-      setShowMicModal(true);
+      if (micPermissionGranted) {
+        // Mic permission already granted from a previous session — skip the consent modal.
+        // AudioContext was just created above; unlockAudio() marks audioReady=true which
+        // triggers the greeting useEffect, whose thenListen=true chain starts the mic.
+        unlockAudio();
+      } else {
+        setShowMicModal(true);
+      }
       return;
     }
     if (isListening) { stopListening(); return; }
