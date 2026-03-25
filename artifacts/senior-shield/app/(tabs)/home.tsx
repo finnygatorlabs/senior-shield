@@ -197,6 +197,9 @@ export default function HomeScreen() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const shouldListenAfterSpeak = useRef(false);
+  // Consecutive no-speech restart counter — capped to prevent infinite "Listening…" loop on mobile
+  const noSpeechRetryRef = useRef(0);
+  const MAX_NO_SPEECH_RETRIES = 4; // ~30 seconds max before giving up
   // Always holds latest values so stale closures (e.g. inside startListening) never read old state
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -528,6 +531,9 @@ export default function HomeScreen() {
       };
 
       r.onresult = (e: any) => {
+        // Real speech detected — reset the no-speech retry counter
+        noSpeechRetryRef.current = 0;
+
         // Build the complete running transcript: all confirmed final segments +
         // the current interim segment. This prevents text from disappearing
         // mid-utterance and gives seniors a full view of what was heard.
@@ -555,17 +561,24 @@ export default function HomeScreen() {
         setInterimText(prev => {
           if (prev.trim()) {
             // Silence timer fired (or recognition ended naturally) — send what was said
+            noSpeechRetryRef.current = 0; // successful exchange — reset counter
             sendMessage(prev);
             return "";
           }
-          // Nothing was said — keep the conversation alive by restarting the mic
+          // Nothing was said — restart only if under the retry cap
           if (
             conversationActiveRef.current &&
             !isSendingRef.current &&
             !isSpeakingRef.current &&
-            !voiceMutedRef.current
+            !voiceMutedRef.current &&
+            noSpeechRetryRef.current < MAX_NO_SPEECH_RETRIES
           ) {
+            noSpeechRetryRef.current += 1;
             setTimeout(() => { startListeningRef.current(); }, 500);
+          } else if (noSpeechRetryRef.current >= MAX_NO_SPEECH_RETRIES) {
+            // Gave up after ~30 s of silence — reset so the user can tap again
+            noSpeechRetryRef.current = 0;
+            conversationActiveRef.current = false;
           }
           return "";
         });
@@ -577,14 +590,20 @@ export default function HomeScreen() {
         if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
         setInterimText("");
         if (e.error === "no-speech" || e.error === "aborted") {
-          // No speech detected at all — restart mic so user doesn't have to tap again
+          // No speech detected — restart only if under the retry cap
           if (
             conversationActiveRef.current &&
             !isSendingRef.current &&
             !isSpeakingRef.current &&
-            !voiceMutedRef.current
+            !voiceMutedRef.current &&
+            noSpeechRetryRef.current < MAX_NO_SPEECH_RETRIES
           ) {
+            noSpeechRetryRef.current += 1;
             setTimeout(() => { startListeningRef.current(); }, 500);
+          } else {
+            // Cap reached — stop the loop, user can tap the orb to try again
+            noSpeechRetryRef.current = 0;
+            conversationActiveRef.current = false;
           }
         } else {
           // Real error (mic denied, etc.) — fall back to text input
@@ -779,6 +798,9 @@ export default function HomeScreen() {
       return;
     }
     if (isListening) { stopListening(); return; }
+    // User is intentionally re-engaging — clear the no-speech retry count so the
+    // cap doesn't carry over from a previous stalled session.
+    noSpeechRetryRef.current = 0;
     if (isSpeaking) { stopSpeaking(); startListening(); return; }
     if (prefs.haptic_feedback && Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startListening();
