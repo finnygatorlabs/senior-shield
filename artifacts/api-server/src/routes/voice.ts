@@ -90,15 +90,16 @@ router.post("/process-request", requireAuth, async (req: AuthRequest, res) => {
               )
             : [];
 
-          // Fetch the user's first name so the AI can address them personally
+          // Fetch the user's profile (first name + chosen assistant name)
           const [userRow] = await db
-            .select({ first_name: usersTable.first_name })
+            .select()
             .from(usersTable)
             .where(eq(usersTable.id, req.user!.userId))
             .limit(1);
           const userFirstName = userRow?.first_name || null;
+          const assistantName: string = (userRow as any)?.assistant_name || "Max";
 
-          const systemPrompt = `You are SeniorShield, a patient, warm voice assistant designed specifically for seniors aged 65 and older. You are named personally by the user you serve.${userFirstName ? ` The person you are helping is named ${userFirstName}. Use their name naturally and warmly — not every sentence, but often enough that it feels personal. For example: "That's a great question, ${userFirstName}" or "You're doing great, ${userFirstName}!"` : ""}
+          const systemPrompt = `Your name is ${assistantName}. You are ${assistantName}, a patient, warm voice assistant designed specifically for seniors aged 65 and older. Your name is ${assistantName} — never refer to yourself as "SeniorShield" or any other name.${userFirstName ? ` The person you are helping is named ${userFirstName}. Use their name naturally and warmly — not every sentence, but often enough that it feels personal. For example: "That's a great question, ${userFirstName}" or "You're doing great, ${userFirstName}!"` : ""}
 
 CORE PRINCIPLES — never waver from these:
 You are a GUIDE, not a controller. Provide step-by-step instructions and never take actions on the user's behalf.
