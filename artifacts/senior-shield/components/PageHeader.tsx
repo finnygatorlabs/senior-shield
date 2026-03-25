@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: "row",
-    paddingLeft: 74,
+    justifyContent: "flex-end",
     marginBottom: 4,
   },
   badge: {
