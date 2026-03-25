@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Google from "expo-auth-session/providers/google";
+import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
@@ -95,6 +96,7 @@ export default function LoginScreen() {
 
   const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    redirectUri: makeRedirectUri({ path: "/auth/google-callback" }),
   });
 
   useEffect(() => {
@@ -198,7 +200,7 @@ export default function LoginScreen() {
               <View style={styles.googleIconCircle}>
                 <Text style={styles.googleG}>G</Text>
               </View>
-              <Text style={[styles.googleButtonText, { color: theme.textSecondary }]}>Continue with Google</Text>
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
             </>
           )}
         </Pressable>
@@ -303,11 +305,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#F9FAFB",
-    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#DADCE0",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   googleIconCircle: {
     width: 26,
@@ -318,7 +325,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   googleG: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFFFFF", lineHeight: 18 },
-  googleButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  googleButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#3C4043" },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
