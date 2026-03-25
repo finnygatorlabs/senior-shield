@@ -3,14 +3,15 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Dark navy tab bar — matches the header gradient for a cohesive look
 const TAB_BG = "#06102E";
 const TAB_ACTIVE = "#FFFFFF";
 const TAB_INACTIVE = "#6B8CC7";
 
 export default function TabLayout() {
   const isIOS = Platform.OS === "ios";
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -23,6 +24,8 @@ export default function TabLayout() {
           backgroundColor: isIOS ? "transparent" : TAB_BG,
           borderTopWidth: 0,
           elevation: 0,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          height: 56 + (insets.bottom > 0 ? insets.bottom : 6),
         },
         tabBarBackground: () => (
           isIOS ? (

@@ -1056,7 +1056,7 @@ export default function HomeScreen() {
               setVoiceMuted(v => !v);
             }}
             hitSlop={10}
-            style={[styles.voiceMuteBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+            style={[styles.voiceMuteBtn, { backgroundColor: theme.card, borderColor: theme.cardBorder, bottom: orbBottomPad + 8 }]}
           >
             <Ionicons
               name={voiceMuted ? "volume-mute" : "volume-high"}
@@ -1194,18 +1194,18 @@ const styles = StyleSheet.create({
     right: 0,
     height: 52,
   },
-  // Soft ambient blue halo behind the orb
+  // Soft ambient blue halo behind the orb — just slightly larger than the 80px compact orb
   orbGlow: {
     position: "absolute",
-    top: 4,
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: "rgba(37,99,235,0.10)",
+    top: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(37,99,235,0.08)",
     shadowColor: "#2563EB",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 28,
+    shadowOpacity: 0.3,
+    shadowRadius: 22,
     elevation: 0,
     alignSelf: "center",
   },
@@ -1236,10 +1236,9 @@ const styles = StyleSheet.create({
   voiceMuteBtn: {
     position: "absolute",
     right: 16,
-    bottom: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
