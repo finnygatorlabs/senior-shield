@@ -19,8 +19,7 @@ export default function PageHeader({ showTagline = false, greeting }: PageHeader
   const insets = useSafeAreaInsets();
 
   // Safe-area top + platform offset
-  const topOffset = insets.top + (Platform.OS === "web" ? 67 : 12);
-  // Raised 6 px more than before (was +11, now +5)
+  const topOffset = insets.top + (Platform.OS === "web" ? 58 : 3);
   const badgeTop = topOffset + 5;
 
   return (
