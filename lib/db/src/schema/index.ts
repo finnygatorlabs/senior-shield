@@ -285,3 +285,140 @@ export const hearingAidBatteryAlertsTable = pgTable("hearing_aid_battery_alerts"
 });
 
 export type HearingAidBatteryAlert = typeof hearingAidBatteryAlertsTable.$inferSelect;
+
+export const contactsTable = pgTable("contacts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  contact_name: varchar("contact_name").notNull(),
+  phone_number: varchar("phone_number"),
+  email: varchar("email"),
+  category: varchar("category").default("other"),
+  favorite_task: varchar("favorite_task"),
+  usage_count: integer("usage_count").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type Contact = typeof contactsTable.$inferSelect;
+
+export const scamLibraryTable = pgTable("scam_library", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pattern_name: varchar("pattern_name").notNull(),
+  keywords: jsonb("keywords"),
+  description: text("description"),
+  accuracy: integer("accuracy").default(0),
+  false_positive_rate: integer("false_positive_rate").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type ScamLibraryPattern = typeof scamLibraryTable.$inferSelect;
+
+export const subscriptionsTable = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  subscription_type: varchar("subscription_type").default("free"),
+  subscription_source: varchar("subscription_source").default("stripe"),
+  external_subscription_id: varchar("external_subscription_id"),
+  status: varchar("status").default("active"),
+  current_period_start: date("current_period_start"),
+  current_period_end: date("current_period_end"),
+  cancel_at_period_end: boolean("cancel_at_period_end").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type Subscription = typeof subscriptionsTable.$inferSelect;
+
+export const telecomAccountsTable = pgTable("telecom_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  carrier: varchar("carrier").notNull(),
+  carrier_user_id: varchar("carrier_user_id"),
+  carrier_phone: varchar("carrier_phone"),
+  subscription_status: varchar("subscription_status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type TelecomAccount = typeof telecomAccountsTable.$inferSelect;
+
+export const insuranceAccountsTable = pgTable("insurance_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  insurance_provider: varchar("insurance_provider").notNull(),
+  member_id: varchar("member_id"),
+  member_dob: date("member_dob"),
+  subscription_status: varchar("subscription_status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type InsuranceAccount = typeof insuranceAccountsTable.$inferSelect;
+
+export const facilityAccountsTable = pgTable("facility_accounts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  facility_name: varchar("facility_name").notNull(),
+  facility_type: varchar("facility_type"),
+  address: varchar("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zip: varchar("zip"),
+  phone: varchar("phone"),
+  email: varchar("email"),
+  admin_user_id: uuid("admin_user_id").references(() => usersTable.id).notNull(),
+  facility_code: varchar("facility_code").unique(),
+  subscription_status: varchar("subscription_status").default("active"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type FacilityAccount = typeof facilityAccountsTable.$inferSelect;
+
+export const facilityResidentsTable = pgTable("facility_residents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  facility_id: uuid("facility_id").references(() => facilityAccountsTable.id, { onDelete: "cascade" }).notNull(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  resident_name: varchar("resident_name"),
+  status: varchar("status").default("active"),
+  joined_at: timestamp("joined_at").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type FacilityResident = typeof facilityResidentsTable.$inferSelect;
+
+export const adminUsersTable = pgTable("admin_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email").unique().notNull(),
+  password_hash: varchar("password_hash").notNull(),
+  role: varchar("role").default("support"),
+  permissions: jsonb("permissions"),
+  last_login: timestamp("last_login"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type AdminUser = typeof adminUsersTable.$inferSelect;
+
+export const adminActivityLogTable = pgTable("admin_activity_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  admin_id: uuid("admin_id").references(() => adminUsersTable.id, { onDelete: "cascade" }).notNull(),
+  action: varchar("action").notNull(),
+  resource_type: varchar("resource_type"),
+  resource_id: varchar("resource_id"),
+  changes: jsonb("changes"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export type AdminActivityLog = typeof adminActivityLogTable.$inferSelect;
+
+export const analyticsEventsTable = pgTable("analytics_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  event_type: varchar("event_type").notNull(),
+  event_data: jsonb("event_data"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export type AnalyticsEvent = typeof analyticsEventsTable.$inferSelect;
