@@ -996,10 +996,11 @@ export default function HomeScreen() {
           style={[
             styles.orbFooter,
             {
-              bottom: orbBottomPad,
+              bottom: 0,
               backgroundColor: theme.background,
-              paddingTop: 8,
-              paddingBottom: 8,
+              paddingTop: 12,
+              // pad content above the tab bar + safe area so nothing overlaps
+              paddingBottom: orbBottomPad,
             },
           ]}
         >
