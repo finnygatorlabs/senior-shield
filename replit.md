@@ -58,7 +58,7 @@ artifacts-monorepo/
 - `POST /api/auth/signup` — register user (returns JWT)
 - `POST /api/auth/login` — login (returns JWT)
 - `GET /api/user/profile` — get profile
-- `PUT /api/user/profile` — update profile (incl. onboarding_completed)
+- `PUT /api/user/profile` — update profile (incl. onboarding_completed, device_platform/model/os_version)
 - `GET/PUT /api/user/preferences` — user preferences
 - `POST /api/voice/process-request` — voice/text AI query (GPT-4o-mini or fallback)
 - `POST /api/scam/analyze` — scam detection (risk score 0-100)

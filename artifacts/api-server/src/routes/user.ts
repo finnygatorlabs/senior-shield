@@ -32,7 +32,7 @@ router.get("/profile", requireAuth, async (req: AuthRequest, res) => {
 
 router.put("/profile", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { first_name, last_name, phone_number, onboarding_completed, onboarding_step } = req.body;
+    const { first_name, last_name, phone_number, onboarding_completed, onboarding_step, device_platform, device_model, device_os_version } = req.body;
 
     const updates: Record<string, unknown> = { updated_at: new Date() };
     if (first_name !== undefined) updates.first_name = first_name;
@@ -40,6 +40,9 @@ router.put("/profile", requireAuth, async (req: AuthRequest, res) => {
     if (phone_number !== undefined) updates.phone_number = phone_number;
     if (onboarding_completed !== undefined) updates.onboarding_completed = onboarding_completed;
     if (onboarding_step !== undefined) updates.onboarding_step = onboarding_step;
+    if (device_platform !== undefined) updates.device_platform = device_platform;
+    if (device_model !== undefined) updates.device_model = device_model;
+    if (device_os_version !== undefined) updates.device_os_version = device_os_version;
 
     const [updated] = await db
       .update(usersTable)

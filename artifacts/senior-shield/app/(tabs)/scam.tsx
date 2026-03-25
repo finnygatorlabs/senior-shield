@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -57,6 +58,7 @@ export default function ScamScreen() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   async function analyze(textToAnalyze?: string) {
     const target = textToAnalyze || text;
@@ -131,6 +133,9 @@ export default function ScamScreen() {
         <View style={styles.inputHeader}>
           <Ionicons name="clipboard-outline" size={20} color={theme.textSecondary} />
           <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Paste message here</Text>
+          <Pressable onPress={() => setShowHelpModal(true)} hitSlop={12} style={styles.infoButton}>
+            <Ionicons name="information-circle-outline" size={22} color={theme.textSecondary} />
+          </Pressable>
         </View>
         <TextInput
           style={[styles.textArea, { color: theme.text, backgroundColor: theme.inputBackground }]}
@@ -257,6 +262,51 @@ export default function ScamScreen() {
         </View>
       )}
     </ScrollView>
+
+      <Modal visible={showHelpModal} transparent animationType="fade" onRequestClose={() => setShowHelpModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowHelpModal(false)}>
+          <View style={[styles.helpModal, { backgroundColor: theme.card }]}>
+            <View style={styles.helpHeader}>
+              <Ionicons name="information-circle" size={28} color="#2563EB" />
+              <Text style={[styles.helpTitle, { color: theme.text }]}>How to Check a Message</Text>
+            </View>
+
+            <View style={styles.helpStep}>
+              <Text style={[styles.helpStepNum, { backgroundColor: "#2563EB" }]}>1</Text>
+              <View style={styles.helpStepContent}>
+                <Text style={[styles.helpStepTitle, { color: theme.text }]}>From Email</Text>
+                <Text style={[styles.helpStepDesc, { color: theme.textSecondary }]}>
+                  Open the suspicious email. Tap and hold on the message text until it highlights. Drag the handles to select all the text. Tap "Copy." Come back here and tap the text box, then tap "Paste."
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.helpStep}>
+              <Text style={[styles.helpStepNum, { backgroundColor: "#2563EB" }]}>2</Text>
+              <View style={styles.helpStepContent}>
+                <Text style={[styles.helpStepTitle, { color: theme.text }]}>From a Text Message</Text>
+                <Text style={[styles.helpStepDesc, { color: theme.textSecondary }]}>
+                  Open the suspicious text. Tap and hold the message bubble. Tap "Copy." Come back to SeniorShield and paste it in the box above.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.helpStep}>
+              <Text style={[styles.helpStepNum, { backgroundColor: "#2563EB" }]}>3</Text>
+              <View style={styles.helpStepContent}>
+                <Text style={[styles.helpStepTitle, { color: theme.text }]}>Or Just Type It</Text>
+                <Text style={[styles.helpStepDesc, { color: theme.textSecondary }]}>
+                  If you can't copy the message, type the key details: who sent it, what they asked for, and any links or phone numbers they included.
+                </Text>
+              </View>
+            </View>
+
+            <Pressable onPress={() => setShowHelpModal(false)} style={styles.helpCloseBtn}>
+              <Text style={styles.helpCloseBtnText}>Got it!</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -268,7 +318,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22, marginBottom: 24 },
   inputCard: { borderRadius: 20, borderWidth: 1, padding: 20, marginBottom: 24, gap: 14 },
   inputHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  inputLabel: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  inputLabel: { fontSize: 14, fontFamily: "Inter_500Medium", flex: 1 },
+  infoButton: { padding: 2 },
   textArea: {
     borderRadius: 14,
     padding: 14,
@@ -348,4 +399,70 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   analyzeAnotherText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  helpModal: {
+    width: "100%",
+    maxWidth: 380,
+    borderRadius: 20,
+    padding: 24,
+    gap: 16,
+  },
+  helpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  helpTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  helpStep: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  helpStepNum: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+    lineHeight: 26,
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  helpStepContent: {
+    flex: 1,
+    gap: 3,
+  },
+  helpStepTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  helpStepDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
+  },
+  helpCloseBtn: {
+    backgroundColor: "#2563EB",
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  helpCloseBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+  },
 });

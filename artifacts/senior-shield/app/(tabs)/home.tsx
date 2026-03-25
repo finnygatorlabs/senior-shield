@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Modal,
+  AppState,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -703,6 +704,54 @@ export default function HomeScreen() {
     return () => document.removeEventListener("visibilitychange", resume);
   }, []);
 
+  const deviceInfoSent = useRef(false);
+  useEffect(() => {
+    if (deviceInfoSent.current || !user?.token) return;
+    deviceInfoSent.current = true;
+    (async () => {
+      try {
+        let devicePlatform = Platform.OS;
+        let deviceModel = "";
+        let deviceOsVersion = String(Platform.Version || "");
+        if (Platform.OS !== "web") {
+          try {
+            const Device = await import("expo-device");
+            deviceModel = Device.modelName || Device.deviceName || "";
+          } catch {}
+        } else if (typeof navigator !== "undefined") {
+          const ua = navigator.userAgent;
+          if (/iPhone/.test(ua)) { devicePlatform = "ios"; deviceModel = "iPhone"; }
+          else if (/iPad/.test(ua)) { devicePlatform = "ios"; deviceModel = "iPad"; }
+          else if (/Android/.test(ua)) { devicePlatform = "android"; deviceModel = "Android device"; }
+        }
+        const domain = process.env.EXPO_PUBLIC_DOMAIN;
+        const base = domain ? `https://${domain}` : "";
+        await fetch(`${base}/api/user/profile`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+          body: JSON.stringify({ device_platform: devicePlatform, device_model: deviceModel, device_os_version: deviceOsVersion }),
+        });
+      } catch {}
+    })();
+  }, [user?.token]);
+
+  const [welcomeBack, setWelcomeBack] = useState(false);
+  const appWasBackgrounded = useRef(false);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        appWasBackgrounded.current = true;
+      } else if (nextState === "active" && appWasBackgrounded.current) {
+        appWasBackgrounded.current = false;
+        if (greeted && messages.length > 1) {
+          setWelcomeBack(true);
+          setTimeout(() => setWelcomeBack(false), 5000);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [greeted, messages.length]);
+
   // ── Send message ──
   async function sendMessage(text: string) {
     if (!text.trim() || isSending) return;
@@ -957,6 +1006,14 @@ export default function HomeScreen() {
           />
         ))}
       </ScrollView>
+
+      {/* ── Welcome back banner ── */}
+      {welcomeBack && (
+        <View style={[styles.welcomeBackBanner, { bottom: statusRowBottom + 30 }]}>
+          <Ionicons name="arrow-up-circle" size={18} color="#2563EB" />
+          <Text style={styles.welcomeBackText}>Welcome back! Your instructions are above.</Text>
+        </View>
+      )}
 
       {/* ── Status label floats above the orb (no layout impact on orb position) ── */}
       {!showText && (
@@ -1321,5 +1378,30 @@ const styles = StyleSheet.create({
   },
   switchCloseBtnText: {
     fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff",
+  },
+  welcomeBackBanner: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  welcomeBackText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#2563EB",
   },
 });
