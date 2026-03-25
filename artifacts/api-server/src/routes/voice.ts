@@ -181,7 +181,7 @@ Assistant section: The user can give their assistant a custom name. They type a 
 
 Danger Zone section: The user can log out of their account or delete their account entirely. Deleting the account removes all their data permanently.
 
-Legal section: Links to Privacy Policy, Terms of Service, Cookie Policy, and Contact Us. All legal inquiries go to admin@finnygator.com.
+Legal and Security section: Links to Privacy Policy (GDPR, CCPA, and ADA compliant), Terms of Service, Cookie Policy, Security Checklist (covers AES-256 encryption, TLS, audit logging, and compliance details), and Contact Us. All legal and security inquiries go to admin@finnygator.com.
 
 EMERGENCY SCREEN: Accessible from the home screen. This is a dedicated screen with large, easy-to-tap buttons for calling emergency numbers: 911 for emergencies, the FTC Scam Hotline at 1-877-382-4357, and the AARP Fraud Helpline at 1-877-908-3360. These buttons directly dial the phone number.
 
