@@ -88,7 +88,7 @@ function MessageBubble({
     return (
       <View style={styles.userRow}>
         <View style={styles.userBubble}>
-          <Text style={{ fontSize: ts.sm, lineHeight: ts.sm * 1.45, color: "#fff", fontFamily: "Inter_400Regular" }}>
+          <Text style={{ fontSize: ts.base, lineHeight: ts.base * 1.5, color: "#fff", fontFamily: "Inter_400Regular" }}>
             {message.text}
           </Text>
         </View>
@@ -97,40 +97,46 @@ function MessageBubble({
   }
   return (
     <View style={styles.asstRow}>
-      <View style={[styles.asstIcon, { backgroundColor: "#DBEAFE" }]}>
-        <Ionicons name="shield-checkmark" size={12} color="#2563EB" />
+      {/* Circular avatar icon */}
+      <View style={styles.asstIcon}>
+        <Ionicons name="shield-checkmark" size={15} color="#fff" />
       </View>
-      <View style={[styles.asstBubble, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
-        {message.isLoading ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <ActivityIndicator size="small" color="#2563EB" />
-            <Text style={{ color: theme.textSecondary, fontSize: ts.sm, fontFamily: "Inter_400Regular" }}>Thinking…</Text>
-          </View>
-        ) : (
-          <>
-            <Text
-              numberOfLines={expanded ? undefined : MAX_LINES}
-              style={{ color: theme.text, fontSize: ts.sm, lineHeight: ts.sm * 1.55, fontFamily: "Inter_400Regular" }}
-            >
-              {message.text}
-            </Text>
-            <View style={styles.replayRow}>
-              {isLong && (
-                <Pressable onPress={() => setExpanded(e => !e)} hitSlop={8}>
-                  <Text style={{ fontSize: ts.xs, color: "#2563EB", fontFamily: "Inter_500Medium" }}>
-                    {expanded ? "Show less" : "Read more"}
-                  </Text>
-                </Pressable>
-              )}
-              {onSpeak && (
-                <Pressable onPress={() => onSpeak(message.text)} style={styles.replayBtn}>
-                  <Ionicons name="volume-medium-outline" size={12} color="#64748B" />
-                  <Text style={{ fontSize: ts.xs, color: "#64748B", fontFamily: "Inter_400Regular" }}>Replay</Text>
-                </Pressable>
-              )}
+      {/* Card bubble with left blue accent + shadow */}
+      <View style={[styles.asstBubble, { backgroundColor: theme.card }]}>
+        {/* Blue left accent strip */}
+        <View style={styles.asstAccent} />
+        <View style={styles.asstBubbleInner}>
+          {message.isLoading ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <ActivityIndicator size="small" color="#2563EB" />
+              <Text style={{ color: theme.textSecondary, fontSize: ts.base, fontFamily: "Inter_400Regular" }}>Thinking…</Text>
             </View>
-          </>
-        )}
+          ) : (
+            <>
+              <Text
+                numberOfLines={expanded ? undefined : MAX_LINES}
+                style={{ color: theme.text, fontSize: ts.base, lineHeight: ts.base * 1.6, fontFamily: "Inter_400Regular" }}
+              >
+                {message.text}
+              </Text>
+              <View style={styles.replayRow}>
+                {isLong && (
+                  <Pressable onPress={() => setExpanded(e => !e)} hitSlop={8}>
+                    <Text style={{ fontSize: ts.sm, color: "#2563EB", fontFamily: "Inter_500Medium" }}>
+                      {expanded ? "Show less ↑" : "Read more ↓"}
+                    </Text>
+                  </Pressable>
+                )}
+                {onSpeak && (
+                  <Pressable onPress={() => onSpeak(message.text)} style={styles.replayBtn} hitSlop={8}>
+                    <Ionicons name="volume-medium-outline" size={14} color="#64748B" />
+                    <Text style={{ fontSize: ts.sm, color: "#64748B", fontFamily: "Inter_400Regular" }}>Replay</Text>
+                  </Pressable>
+                )}
+              </View>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -998,12 +1004,21 @@ export default function HomeScreen() {
             {
               bottom: 0,
               backgroundColor: theme.background,
-              paddingTop: 12,
+              paddingTop: 16,
               // pad content above the tab bar + safe area so nothing overlaps
               paddingBottom: orbBottomPad,
             },
           ]}
         >
+          {/* Gradient fade — messages dissolve into the orb panel */}
+          <LinearGradient
+            colors={["transparent", theme.background]}
+            style={[styles.orbFade, { pointerEvents: "none" }]}
+          />
+
+          {/* Ambient glow behind the orb */}
+          <View style={styles.orbGlow} />
+
           {/* Orb — compact when idle, full size when active */}
           <FluidOrb
             onPress={handleOrbPress}
@@ -1013,14 +1028,22 @@ export default function HomeScreen() {
             isIdle={isOrbCompact}
           />
 
-          {/* "Type instead" — slim link, always in layout so orb never shifts */}
+          {/* "Type instead" — subtle pill button */}
           <Pressable
             onPress={() => { stopListening(); stopSpeaking(); setShowText(true); }}
             hitSlop={16}
-            style={[styles.typeBtn, { opacity: (!isListening && !isSpeaking) ? 1 : 0 }]}
+            style={[
+              styles.typeBtn,
+              {
+                opacity: (!isListening && !isSpeaking) ? 1 : 0,
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              }
+            ]}
             pointerEvents={(!isListening && !isSpeaking) ? "auto" : "none"}
           >
-            <Text style={{ fontSize: ts.sm, color: theme.textSecondary, fontFamily: "Inter_400Regular", textDecorationLine: "underline" }}>
+            <Ionicons name="create-outline" size={13} color={theme.textSecondary} />
+            <Text style={{ fontSize: ts.sm, color: theme.textSecondary, fontFamily: "Inter_500Medium" }}>
               Type instead
             </Text>
           </Pressable>
@@ -1095,31 +1118,96 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   messages: { flex: 1 },
-  msgsContent: { paddingHorizontal: 12, paddingTop: 8, gap: 6 },
+  msgsContent: { paddingHorizontal: 14, paddingTop: 12, gap: 10 },
+
+  // User bubble — vivid blue pill, right-aligned
   userRow: { alignItems: "flex-end" },
   userBubble: {
-    backgroundColor: "#2563EB", borderRadius: 18, borderBottomRightRadius: 4,
-    paddingHorizontal: 12, paddingVertical: 7, maxWidth: "78%",
+    backgroundColor: "#2563EB",
+    borderRadius: 22,
+    borderBottomRightRadius: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    maxWidth: "78%",
+    // shadow
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  asstRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, maxWidth: "90%" },
+
+  // AI bubble — white card with left blue accent strip and subtle shadow
+  asstRow: { flexDirection: "row", alignItems: "flex-start", gap: 9, maxWidth: "92%" },
   asstIcon: {
-    width: 22, height: 22, borderRadius: 6,
-    alignItems: "center", justifyContent: "center", marginTop: 2, flexShrink: 0,
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: "#2563EB",
+    alignItems: "center", justifyContent: "center",
+    marginTop: 3, flexShrink: 0,
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   asstBubble: {
-    flex: 1, borderRadius: 16, borderBottomLeftRadius: 4,
-    paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1,
+    flex: 1,
+    borderRadius: 18,
+    borderBottomLeftRadius: 5,
+    overflow: "hidden",
+    flexDirection: "row",
+    // card shadow
+    shadowColor: "#1E3A5F",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  replayRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 5 },
-  replayBtn: { flexDirection: "row", alignItems: "center", gap: 3 },
+  asstAccent: {
+    width: 4,
+    backgroundColor: "#2563EB",
+    borderTopLeftRadius: 18,
+    borderBottomLeftRadius: 5,
+    flexShrink: 0,
+  },
+  asstBubbleInner: {
+    flex: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  replayRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 7 },
+  replayBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
 
-  // Orb footer — floats above the tab bar
+  // Orb footer — anchored at screen bottom, fills to tab bar
   orbFooter: {
     position: "absolute",
     left: 0,
     right: 0,
     alignItems: "center",
     gap: 0,
+  },
+  // Gradient that bleeds upward from the footer, dissolving messages into the panel
+  orbFade: {
+    position: "absolute",
+    top: -52,
+    left: 0,
+    right: 0,
+    height: 52,
+  },
+  // Soft ambient blue halo behind the orb
+  orbGlow: {
+    position: "absolute",
+    top: 4,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: "rgba(37,99,235,0.10)",
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 28,
+    elevation: 0,
+    alignSelf: "center",
   },
   statusRow: {
     justifyContent: "center",
@@ -1136,9 +1224,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 7, maxWidth: "82%",
   },
   typeBtn: {
-    marginTop: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 4,
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   voiceMuteBtn: {
     position: "absolute",
