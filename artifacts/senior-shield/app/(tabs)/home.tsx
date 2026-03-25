@@ -912,7 +912,7 @@ export default function HomeScreen() {
         style={styles.messages}
         contentContainerStyle={[
           styles.msgsContent,
-          { paddingBottom: orbBottomPad + ORB_FOOTER_HEIGHT + 16 },
+          { paddingBottom: orbBottomPad + ORB_FOOTER_HEIGHT + 52 },
         ]}
         showsVerticalScrollIndicator={false}
       >

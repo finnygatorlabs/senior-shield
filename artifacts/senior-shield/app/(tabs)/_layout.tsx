@@ -2,46 +2,49 @@ import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
-import { Colors } from "@/constants/colors";
+import { Platform, StyleSheet, View } from "react-native";
+
+// Dark navy tab bar — matches the header gradient for a cohesive look
+const TAB_BG = "#06102E";
+const TAB_ACTIVE = "#FFFFFF";
+const TAB_INACTIVE = "#6B8CC7";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
-  const theme = isDark ? Colors.dark : Colors.light;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: theme.tabIconDefault,
+        tabBarActiveTintColor: TAB_ACTIVE,
+        tabBarInactiveTintColor: TAB_INACTIVE,
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : theme.surface,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: theme.border,
+          backgroundColor: isIOS ? "transparent" : TAB_BG,
+          borderTopWidth: 0,
           elevation: 0,
-          ...(isWeb ? { height: 64 } : {}),
         },
-        tabBarBackground: () =>
+        tabBarBackground: () => (
           isIOS ? (
             <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
+              intensity={95}
+              tint="dark"
               style={StyleSheet.absoluteFill}
             />
-          ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface }]} />
-          ) : null,
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: TAB_BG }]} />
+          )
+        ),
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
           fontSize: 11,
         },
       }}
     >
+      <Tabs.Screen
+        name="index"
+        options={{ href: null }}
+      />
       <Tabs.Screen
         name="home"
         options={{
