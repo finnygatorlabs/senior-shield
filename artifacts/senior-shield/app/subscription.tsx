@@ -215,7 +215,7 @@ export default function SubscriptionScreen() {
                 <View style={[styles.optionIconBox, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
                   <Ionicons name="card" size={20} color="#FFFFFF" />
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.optionName}>Credit Card</Text>
                   <Text style={styles.optionDesc}>Pay securely with Visa, Mastercard, or American Express</Text>
                 </View>
@@ -402,11 +402,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+    paddingHorizontal: 20,
     zIndex: 10,
   },
   backButton: {
     padding: 8,
-    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 18,
@@ -537,6 +537,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: 10,
+    flexShrink: 1,
   },
   checkCircle: {
     width: 22,
