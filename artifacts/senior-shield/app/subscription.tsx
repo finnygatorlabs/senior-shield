@@ -198,20 +198,20 @@ export default function SubscriptionScreen() {
       <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
       <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
 
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Choose Payment Method</Text>
+        <View style={styles.stepIndicator}>
+          <Text style={styles.stepText}>Step 2 of 3</Text>
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Choose Payment Method</Text>
-          <View style={styles.stepIndicator}>
-            <Text style={styles.stepText}>Step 2 of 3</Text>
-          </View>
-        </View>
-
         <View style={styles.progressContainer}>
           <View style={[styles.progressBar, { width: '66%' }]} />
         </View>
