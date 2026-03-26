@@ -8,26 +8,66 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  StatusBar,
+  Dimensions,
+  Image,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
+const { width } = Dimensions.get("window");
+const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
+
+function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: number; left?: number; right?: number; opacity: number }) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.5,
+        borderColor: `rgba(255,255,255,${opacity})`,
+        top,
+        left,
+        right,
+      }}
+    />
+  );
+}
+
+function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top: number; left: number; rotate: string; opacity: number }) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        width: w,
+        height: 1,
+        backgroundColor: `rgba(255,255,255,${opacity})`,
+        top,
+        left,
+        transform: [{ rotate }],
+      }}
+    />
+  );
+}
+
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
     <View style={errStyles.container}>
-      <Ionicons name="alert-circle" size={18} color="#EF4444" />
+      <Ionicons name="alert-circle" size={18} color="#FCA5A5" />
       <Text style={errStyles.text}>{message}</Text>
       <Pressable onPress={onDismiss} hitSlop={8}>
-        <Ionicons name="close" size={18} color="#EF4444" />
+        <Ionicons name="close" size={18} color="#FCA5A5" />
       </Pressable>
     </View>
   );
@@ -36,7 +76,7 @@ function InlineError({ message, onDismiss }: { message: string; onDismiss: () =>
 function InlineSuccess({ message }: { message: string }) {
   return (
     <View style={successStyles.container}>
-      <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+      <Ionicons name="checkmark-circle" size={18} color="#34D399" />
       <Text style={successStyles.text}>{message}</Text>
     </View>
   );
@@ -47,8 +87,8 @@ const errStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: "rgba(239,68,68,0.15)",
+    borderColor: "rgba(239,68,68,0.3)",
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -57,7 +97,7 @@ const errStyles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: "#B91C1C",
+    color: "#FCA5A5",
     lineHeight: 20,
   },
 });
@@ -67,8 +107,8 @@ const successStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#F0FDF4",
-    borderColor: "#BBF7D0",
+    backgroundColor: "rgba(16,185,129,0.15)",
+    borderColor: "rgba(16,185,129,0.3)",
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -77,14 +117,14 @@ const successStyles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: "#065F46",
+    color: "#34D399",
     lineHeight: 20,
   },
 });
 
 export default function LoginScreen() {
-  const { theme } = useTheme();
   const { login, loginWithGoogle } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -159,28 +199,39 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "bottom"]}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
+      <DecoCircle size={140} top={30} right={30} opacity={0.06} />
+      <DecoCircle size={300} top={-120} left={-150} opacity={0.06} />
+      <DecoCircle size={180} top={400} left={-90} opacity={0.04} />
+      <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
+      <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
+
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Sign in</Text>
+        <Text style={styles.headerTitle}>Sign in</Text>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.logoRow}>
-          <View style={[styles.iconBg, { backgroundColor: "#DBEAFE" }]}>
-            <Ionicons name="shield-checkmark" size={36} color="#2563EB" />
-          </View>
+          <Image
+            source={require("../../assets/images/logo-shield.png")}
+            style={styles.logoImg}
+            resizeMode="contain"
+          />
           <View>
-            <Text style={[styles.welcomeTitle, { color: theme.text }]}>Welcome back</Text>
-            <Text style={[styles.welcomeSub, { color: theme.textSecondary }]}>Sign in to SeniorShield</Text>
+            <Text style={styles.welcomeTitle}>Welcome back</Text>
+            <Text style={styles.welcomeSub}>Sign in to SeniorShield</Text>
           </View>
         </View>
 
@@ -194,7 +245,7 @@ export default function LoginScreen() {
           disabled={loading || googleLoading}
         >
           {googleLoading ? (
-            <ActivityIndicator size="small" color="#374151" />
+            <ActivityIndicator size="small" color="#0E2D6B" />
           ) : (
             <>
               <View style={styles.googleIconCircle}>
@@ -206,21 +257,21 @@ export default function LoginScreen() {
         </Pressable>
 
         <View style={styles.dividerRow}>
-          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-          <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or sign in with email</Text>
-          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or sign in with email</Text>
+          <View style={styles.dividerLine} />
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} />
+          <Text style={styles.label}>Email Address</Text>
+          <View style={styles.input}>
+            <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={email}
               onChangeText={v => { setEmail(v); setError(""); setSuccess(""); }}
               placeholder="your@email.com"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -231,19 +282,19 @@ export default function LoginScreen() {
 
         <View style={styles.field}>
           <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: theme.text }]}>Password</Text>
+            <Text style={styles.label}>Password</Text>
             <Pressable onPress={handleForgotPassword} hitSlop={10}>
               <Text style={styles.forgotLink}>Forgot password?</Text>
             </Pressable>
           </View>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} />
+          <View style={styles.input}>
+            <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={password}
               onChangeText={v => { setPassword(v); setError(""); setSuccess(""); }}
               placeholder="Your password"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               returnKeyType="done"
@@ -253,7 +304,7 @@ export default function LoginScreen() {
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color={theme.textTertiary}
+                color="rgba(255,255,255,0.5)"
               />
             </Pressable>
           </View>
@@ -267,54 +318,48 @@ export default function LoginScreen() {
           onPress={handleLogin}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : (
+          {loading ? <ActivityIndicator color="#0E2D6B" /> : (
             <Text style={styles.loginButtonText}>Sign In</Text>
           )}
         </Pressable>
 
         <Pressable onPress={() => router.push("/auth/signup")} style={styles.switchLink}>
-          <Text style={[styles.switchText, { color: theme.textSecondary }]}>
+          <Text style={styles.switchText}>
             Don't have an account?{" "}
-            <Text style={{ color: "#2563EB", fontFamily: "Inter_600SemiBold" }}>Sign up free</Text>
+            <Text style={{ color: "#34D399", fontFamily: "Inter_600SemiBold" }}>Sign up free</Text>
           </Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    zIndex: 10,
   },
   backButton: { width: 44, height: 44, justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40, gap: 18 },
+  content: { paddingHorizontal: 24, paddingTop: 12, gap: 18 },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 16, marginBottom: 8 },
-  iconBg: { width: 64, height: 64, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  welcomeTitle: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  welcomeSub: { fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 2 },
+  logoImg: { width: 56, height: 56 },
+  welcomeTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  welcomeSub: { fontSize: 14, fontFamily: "Inter_400Regular", marginTop: 2, color: "rgba(255,255,255,0.7)" },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#DADCE0",
     backgroundColor: "#FFFFFF",
     paddingVertical: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
   },
   googleIconCircle: {
     width: 26,
@@ -325,14 +370,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   googleG: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFFFFF", lineHeight: 18 },
-  googleButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#3C4043" },
+  googleButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#0E2D6B" },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.15)" },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
   field: { gap: 8 },
-  label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  forgotLink: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#2563EB" },
+  forgotLink: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#34D399" },
   input: {
     flexDirection: "row",
     alignItems: "center",
@@ -341,12 +386,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.15)",
   },
-  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
-  loginButton: { backgroundColor: "#2563EB", borderRadius: 16, paddingVertical: 18, alignItems: "center" },
-  loginButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0, color: "#FFFFFF" },
+  loginButton: { backgroundColor: "#FFFFFF", borderRadius: 16, paddingVertical: 18, alignItems: "center" },
+  loginButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#0E2D6B" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.6 },
   switchLink: { alignItems: "center", paddingVertical: 4 },
-  switchText: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  switchText: { fontSize: 15, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.7)" },
 });

@@ -6,21 +6,59 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
+  StatusBar,
+  Dimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
-import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
+
+const { width } = Dimensions.get("window");
+const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
+
+function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: number; left?: number; right?: number; opacity: number }) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: 1.5,
+        borderColor: `rgba(255,255,255,${opacity})`,
+        top,
+        left,
+        right,
+      }}
+    />
+  );
+}
+
+function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top: number; left: number; rotate: string; opacity: number }) {
+  return (
+    <View
+      style={{
+        position: "absolute",
+        width: w,
+        height: 1,
+        backgroundColor: `rgba(255,255,255,${opacity})`,
+        top,
+        left,
+        transform: [{ rotate }],
+      }}
+    />
+  );
+}
 
 const USER_TYPES = [
   { value: "senior", label: "Senior (65+)", icon: "person" as const, description: "I want tech help & scam protection" },
@@ -31,10 +69,10 @@ const USER_TYPES = [
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
     <View style={errStyles.container}>
-      <Ionicons name="alert-circle" size={18} color="#EF4444" />
+      <Ionicons name="alert-circle" size={18} color="#FCA5A5" />
       <Text style={errStyles.text}>{message}</Text>
       <Pressable onPress={onDismiss} hitSlop={8}>
-        <Ionicons name="close" size={18} color="#EF4444" />
+        <Ionicons name="close" size={18} color="#FCA5A5" />
       </Pressable>
     </View>
   );
@@ -45,8 +83,8 @@ const errStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FECACA",
+    backgroundColor: "rgba(239,68,68,0.15)",
+    borderColor: "rgba(239,68,68,0.3)",
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
@@ -55,14 +93,14 @@ const errStyles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: "#B91C1C",
+    color: "#FCA5A5",
     lineHeight: 20,
   },
 });
 
 export default function SignupScreen() {
-  const { theme } = useTheme();
   const { signup, loginWithGoogle } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<"type" | "details">("type");
   const [userType, setUserType] = useState("senior");
@@ -137,23 +175,31 @@ export default function SignupScreen() {
 
   if (step === "type") {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "bottom"]}>
-        <View style={styles.header}>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
+        <DecoCircle size={140} top={30} right={30} opacity={0.06} />
+        <DecoCircle size={300} top={-120} left={-150} opacity={0.06} />
+        <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
+        <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
+
+        <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
           <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Create account</Text>
+          <Text style={styles.headerTitle}>Create account</Text>
           <View style={{ width: 44 }} />
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.typeContent}
+          contentContainerStyle={[styles.typeContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.typeTopSection}>
-            <Text style={[styles.typeHeading, { color: theme.text }]}>Who are you?</Text>
-            <Text style={[styles.typeSubheading, { color: theme.textSecondary }]}>
+            <Text style={styles.typeHeading}>Who are you?</Text>
+            <Text style={styles.typeSubheading}>
               This helps us personalise your experience
             </Text>
           </View>
@@ -170,24 +216,17 @@ export default function SignupScreen() {
                   }}
                   style={[
                     styles.typeCard,
-                    {
-                      backgroundColor: selected ? "#DBEAFE" : theme.card,
-                      borderColor: selected ? "#2563EB" : theme.cardBorder,
-                    },
+                    selected && styles.typeCardSelected,
                   ]}
                 >
-                  <View style={[styles.typeIconBg, { backgroundColor: selected ? "#2563EB" : theme.inputBackground }]}>
-                    <Ionicons name={type.icon} size={24} color={selected ? "#FFFFFF" : theme.textSecondary} />
+                  <View style={[styles.typeIconBg, selected && styles.typeIconBgSelected]}>
+                    <Ionicons name={type.icon} size={24} color="#FFFFFF" />
                   </View>
                   <View style={styles.typeCardText}>
-                    <Text style={[styles.typeCardLabel, { color: selected ? "#1D4ED8" : theme.text }]}>
-                      {type.label}
-                    </Text>
-                    <Text style={[styles.typeCardDesc, { color: selected ? "#3B82F6" : theme.textSecondary }]}>
-                      {type.description}
-                    </Text>
+                    <Text style={styles.typeCardLabel}>{type.label}</Text>
+                    <Text style={styles.typeCardDesc}>{type.description}</Text>
                   </View>
-                  {selected && <Ionicons name="checkmark-circle" size={24} color="#2563EB" />}
+                  {selected && <Ionicons name="checkmark-circle" size={24} color="#34D399" />}
                 </Pressable>
               );
             })}
@@ -195,7 +234,7 @@ export default function SignupScreen() {
 
           <View style={styles.signInOptions}>
             <Pressable
-              style={[styles.googleButton, googleLoading && styles.googleButtonDisabled]}
+              style={[styles.googleButton, googleLoading && styles.disabled]}
               onPress={() => {
                 setError("");
                 googlePromptAsync();
@@ -203,7 +242,7 @@ export default function SignupScreen() {
               disabled={googleLoading}
             >
               {googleLoading ? (
-                <ActivityIndicator size="small" color="#374151" />
+                <ActivityIndicator size="small" color="#0E2D6B" />
               ) : (
                 <>
                   <View style={styles.googleIconCircle}>
@@ -215,9 +254,9 @@ export default function SignupScreen() {
             </Pressable>
 
             <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-              <Text style={[styles.dividerText, { color: theme.textTertiary }]}>or use email</Text>
-              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or use email</Text>
+              <View style={styles.dividerLine} />
             </View>
 
             <Pressable
@@ -228,39 +267,46 @@ export default function SignupScreen() {
               }}
             >
               <Text style={styles.continueButtonText}>Continue with Email</Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={20} color="#0E2D6B" />
             </Pressable>
           </View>
 
           <Pressable onPress={() => router.push("/auth/login")} style={styles.switchLink}>
-            <Text style={[styles.switchText, { color: theme.textSecondary }]}>
+            <Text style={styles.switchText}>
               Already have an account?{" "}
-              <Text style={{ color: "#2563EB", fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
+              <Text style={{ color: "#34D399", fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
             </Text>
           </Pressable>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={["top", "bottom"]}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
+      <DecoCircle size={140} top={30} right={30} opacity={0.06} />
+      <DecoCircle size={180} top={400} left={-90} opacity={0.04} />
+      <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
+
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <Pressable onPress={() => setStep("type")} style={styles.backButton} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Your details</Text>
+        <Text style={styles.headerTitle}>Your details</Text>
         <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.selectedTypeBadge, { backgroundColor: "#DBEAFE" }]}>
-          <Ionicons name={selectedType.icon} size={16} color="#2563EB" />
+        <View style={styles.selectedTypeBadge}>
+          <Ionicons name={selectedType.icon} size={16} color="#FFFFFF" />
           <Text style={styles.selectedTypeBadgeText}>{selectedType.label}</Text>
           <Pressable onPress={() => setStep("type")} hitSlop={8}>
             <Text style={styles.changeBadgeLink}>Change</Text>
@@ -268,15 +314,15 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>First Name</Text>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
+          <Text style={styles.label}>First Name</Text>
+          <View style={styles.input}>
+            <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={firstName}
               onChangeText={v => { setFirstName(v); setError(""); }}
               placeholder="Jane"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               autoCapitalize="words"
               returnKeyType="next"
             />
@@ -284,17 +330,17 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>
-            Last Name <Text style={[styles.optional, { color: theme.textTertiary }]}>(optional)</Text>
+          <Text style={styles.label}>
+            Last Name <Text style={styles.optional}>(optional)</Text>
           </Text>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
+          <View style={styles.input}>
+            <Ionicons name="person-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={lastName}
               onChangeText={setLastName}
               placeholder="Smith"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               autoCapitalize="words"
               returnKeyType="next"
             />
@@ -302,15 +348,15 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="mail-outline" size={20} color={theme.textTertiary} />
+          <Text style={styles.label}>Email Address</Text>
+          <View style={styles.input}>
+            <Ionicons name="mail-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={email}
               onChangeText={v => { setEmail(v); setError(""); }}
               placeholder="your@email.com"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -320,15 +366,15 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={[styles.label, { color: theme.text }]}>Password</Text>
-          <View style={[styles.input, { backgroundColor: theme.inputBackground, borderColor: theme.border }]}>
-            <Ionicons name="lock-closed-outline" size={20} color={theme.textTertiary} />
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.input}>
+            <Ionicons name="lock-closed-outline" size={20} color="rgba(255,255,255,0.5)" />
             <TextInput
-              style={[styles.textInput, { color: theme.text }]}
+              style={styles.textInput}
               value={password}
               onChangeText={v => { setPassword(v); setError(""); }}
               placeholder="Min. 8 characters"
-              placeholderTextColor={theme.placeholder}
+              placeholderTextColor="rgba(255,255,255,0.35)"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               returnKeyType="done"
@@ -338,7 +384,7 @@ export default function SignupScreen() {
               <Ionicons
                 name={showPassword ? "eye-off-outline" : "eye-outline"}
                 size={20}
-                color={theme.textTertiary}
+                color="rgba(255,255,255,0.5)"
               />
             </Pressable>
           </View>
@@ -354,47 +400,54 @@ export default function SignupScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color="#0E2D6B" />
           ) : (
             <Text style={styles.signupButtonText}>Create Account — It's Free</Text>
           )}
         </Pressable>
 
         <Pressable onPress={() => router.push("/auth/login")} style={styles.switchLink}>
-          <Text style={[styles.switchText, { color: theme.textSecondary }]}>
+          <Text style={styles.switchText}>
             Already have an account?{" "}
-            <Text style={{ color: "#2563EB", fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
+            <Text style={{ color: "#34D399", fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
           </Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    zIndex: 10,
   },
   backButton: { width: 44, height: 44, justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
+  headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   scroll: { flex: 1 },
-  typeContent: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 32, gap: 0 },
+  typeContent: { paddingHorizontal: 24, paddingTop: 8, gap: 0 },
   typeTopSection: { paddingTop: 8, paddingBottom: 24 },
-  typeHeading: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 8 },
-  typeSubheading: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22 },
+  typeHeading: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 8, color: "#FFFFFF" },
+  typeSubheading: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22, color: "rgba(255,255,255,0.7)" },
   typeList: { gap: 12, marginBottom: 28 },
   typeCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1.5,
     padding: 18,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  typeCardSelected: {
+    backgroundColor: "rgba(52,211,153,0.15)",
+    borderColor: "rgba(52,211,153,0.5)",
   },
   typeIconBg: {
     width: 48,
@@ -402,10 +455,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  typeIconBgSelected: {
+    backgroundColor: "rgba(52,211,153,0.25)",
   },
   typeCardText: { flex: 1 },
-  typeCardLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
-  typeCardDesc: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  typeCardLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 2, color: "#FFFFFF" },
+  typeCardDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.6)" },
   signInOptions: { gap: 14 },
   googleButton: {
     flexDirection: "row",
@@ -413,17 +470,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#DADCE0",
     backgroundColor: "#FFFFFF",
     paddingVertical: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  googleButtonDisabled: { opacity: 0.6 },
   googleIconCircle: {
     width: 26,
     height: 26,
@@ -433,12 +482,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   googleG: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#FFFFFF", lineHeight: 18 },
-  googleButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#3C4043" },
+  googleButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#0E2D6B" },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.15)" },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
   continueButton: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingVertical: 18,
     flexDirection: "row",
@@ -446,8 +495,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  continueButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-  content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40, gap: 18 },
+  continueButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#0E2D6B" },
+  content: { paddingHorizontal: 24, paddingTop: 16, gap: 18 },
   selectedTypeBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -457,12 +506,15 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignSelf: "flex-start",
     marginBottom: 4,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
-  selectedTypeBadgeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#1D4ED8" },
-  changeBadgeLink: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#3B82F6", marginLeft: 4 },
+  selectedTypeBadgeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  changeBadgeLink: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#34D399", marginLeft: 4 },
   field: { gap: 8 },
-  label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  optional: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  optional: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
   input: {
     flexDirection: "row",
     alignItems: "center",
@@ -471,18 +523,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 10,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.15)",
   },
-  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0 },
+  textInput: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", minWidth: 0, color: "#FFFFFF" },
   signupButton: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingVertical: 18,
     alignItems: "center",
     marginTop: 4,
   },
-  signupButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  signupButtonText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#0E2D6B" },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.6 },
   switchLink: { alignItems: "center", paddingVertical: 4 },
-  switchText: { fontSize: 15, fontFamily: "Inter_400Regular" },
+  switchText: { fontSize: 15, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.7)" },
 });
