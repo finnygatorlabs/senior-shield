@@ -125,7 +125,12 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('stripe');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(false);
+
+  const planDetails = selectedPlan === 'monthly'
+    ? { label: 'Premium Monthly', price: '$12.99/month', renewal: 'Auto-renews monthly' }
+    : { label: 'Premium Annual', price: '$99.99/year', renewal: 'Auto-renews yearly (save 36%)' };
 
   const handleSelectMethod = (method: PaymentMethod) => {
     const option = PAYMENT_OPTIONS.find((o) => o.id === method);
@@ -146,7 +151,7 @@ export default function SubscriptionScreen() {
         setLoading(true);
 
         const response = await billingApi.createCheckout(
-          'monthly',
+          selectedPlan,
           user?.token
         );
 
@@ -223,6 +228,26 @@ export default function SubscriptionScreen() {
           </Text>
         </View>
 
+        <View style={styles.planToggle}>
+          <TouchableOpacity
+            style={[styles.planOption, selectedPlan === 'monthly' && styles.planOptionActive]}
+            onPress={() => setSelectedPlan('monthly')}
+          >
+            <Text style={[styles.planOptionLabel, selectedPlan === 'monthly' && styles.planOptionLabelActive]}>Monthly</Text>
+            <Text style={[styles.planOptionPrice, selectedPlan === 'monthly' && styles.planOptionPriceActive]}>$12.99/mo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.planOption, selectedPlan === 'annual' && styles.planOptionActive]}
+            onPress={() => setSelectedPlan('annual')}
+          >
+            <View style={styles.planSaveBadge}>
+              <Text style={styles.planSaveText}>Save 36%</Text>
+            </View>
+            <Text style={[styles.planOptionLabel, selectedPlan === 'annual' && styles.planOptionLabelActive]}>Annual</Text>
+            <Text style={[styles.planOptionPrice, selectedPlan === 'annual' && styles.planOptionPriceActive]}>$99.99/yr</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.optionsContainer}>
           {PAYMENT_OPTIONS.map((option) => (
             <PaymentOptionCard
@@ -259,17 +284,17 @@ export default function SubscriptionScreen() {
           <View style={styles.billingCard}>
             <View style={styles.billingRow}>
               <Text style={styles.billingKey}>Plan</Text>
-              <Text style={styles.billingValue}>Premium Monthly</Text>
+              <Text style={styles.billingValue}>{planDetails.label}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.billingRow}>
               <Text style={styles.billingKey}>Price</Text>
-              <Text style={styles.billingValue}>$12.99/month</Text>
+              <Text style={styles.billingValue}>{planDetails.price}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.billingRow}>
               <Text style={styles.billingKey}>Renewal</Text>
-              <Text style={styles.billingValue}>Auto-renews monthly</Text>
+              <Text style={styles.billingValue}>{planDetails.renewal}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.billingRow}>
@@ -484,6 +509,58 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: 'rgba(255,255,255,0.7)',
     lineHeight: 24,
+  },
+
+  planToggle: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  planOption: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  planOptionActive: {
+    borderColor: 'rgba(52,211,153,0.5)',
+    backgroundColor: 'rgba(52,211,153,0.1)',
+  },
+  planOptionLabel: {
+    fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(255,255,255,0.5)',
+    marginBottom: 4,
+  },
+  planOptionLabelActive: {
+    color: '#FFFFFF',
+  },
+  planOptionPrice: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    color: 'rgba(255,255,255,0.4)',
+  },
+  planOptionPriceActive: {
+    color: '#34D399',
+  },
+  planSaveBadge: {
+    position: 'absolute',
+    top: -10,
+    right: 10,
+    backgroundColor: '#34D399',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  planSaveText: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: '#0E2D6B',
   },
 
   optionsContainer: {
