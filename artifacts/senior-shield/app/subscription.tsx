@@ -73,7 +73,7 @@ const PAYMENT_OPTIONS: PaymentOption[] = [
     name: 'Credit Card',
     icon: 'card',
     description: 'Pay securely with Visa, Mastercard, or American Express',
-    price: '$12.99/month',
+    price: '',
     status: 'active',
     color: '#FFFFFF',
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -249,15 +249,20 @@ export default function SubscriptionScreen() {
         </View>
 
         <View style={styles.optionsContainer}>
-          {PAYMENT_OPTIONS.map((option) => (
-            <PaymentOptionCard
-              key={option.id}
-              option={option}
-              isSelected={selectedMethod === option.id}
-              onSelect={() => handleSelectMethod(option.id)}
-              onContactSales={() => handleContactSales(option.id)}
-            />
-          ))}
+          {PAYMENT_OPTIONS.map((option) => {
+            const displayOption = option.id === 'stripe'
+              ? { ...option, price: planDetails.price }
+              : option;
+            return (
+              <PaymentOptionCard
+                key={option.id}
+                option={displayOption}
+                isSelected={selectedMethod === option.id}
+                onSelect={() => handleSelectMethod(option.id)}
+                onContactSales={() => handleContactSales(option.id)}
+              />
+            );
+          })}
         </View>
 
         {selectedMethod === 'stripe' && (
