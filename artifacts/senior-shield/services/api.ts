@@ -245,6 +245,36 @@ export const billingApi = {
 };
 
 
+export const remindersApi = {
+  getPresets(token?: string) {
+    return request("/reminders/presets", { token });
+  },
+
+  getAll(token?: string) {
+    return request("/reminders", { token });
+  },
+
+  getActive(token?: string) {
+    return request("/reminders/active", { token });
+  },
+
+  add(data: { reminder_key: string; label: string; prompt: string; icon?: string; is_custom?: boolean }, token?: string) {
+    return request("/reminders", { method: "POST", body: data, token });
+  },
+
+  toggle(id: string, is_active: boolean, token?: string) {
+    return request(`/reminders/${id}/toggle`, { method: "PUT", body: { is_active }, token });
+  },
+
+  remove(id: string, token?: string) {
+    return request(`/reminders/${id}`, { method: "DELETE", token });
+  },
+
+  respond(id: string, response: string, token?: string) {
+    return request(`/reminders/${id}/respond`, { method: "POST", body: { response }, token });
+  },
+};
+
 export const userApi = {
   getProfile(token?: string) {
     return request("/user/profile", { token });

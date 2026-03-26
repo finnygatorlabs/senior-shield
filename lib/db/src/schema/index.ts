@@ -422,3 +422,36 @@ export const analyticsEventsTable = pgTable("analytics_events", {
 });
 
 export type AnalyticsEvent = typeof analyticsEventsTable.$inferSelect;
+
+export const dailyRemindersTable = pgTable("daily_reminders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  reminder_key: varchar("reminder_key").notNull(),
+  label: varchar("label").notNull(),
+  prompt: text("prompt").notNull(),
+  icon: varchar("icon").default("notifications-outline"),
+  is_active: boolean("is_active").default(true),
+  is_custom: boolean("is_custom").default(false),
+  sort_order: integer("sort_order").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (t) => [unique().on(t.user_id, t.reminder_key)]);
+
+export const insertDailyReminderSchema = createInsertSchema(dailyRemindersTable).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type DailyReminder = typeof dailyRemindersTable.$inferSelect;
+export type InsertDailyReminder = z.infer<typeof insertDailyReminderSchema>;
+
+export const dailyReminderResponsesTable = pgTable("daily_reminder_responses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  reminder_id: uuid("reminder_id").references(() => dailyRemindersTable.id, { onDelete: "cascade" }).notNull(),
+  response: varchar("response"),
+  responded_at: timestamp("responded_at").defaultNow(),
+});
+
+export type DailyReminderResponse = typeof dailyReminderResponsesTable.$inferSelect;

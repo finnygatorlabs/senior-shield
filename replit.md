@@ -19,7 +19,8 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 **Mobile Application (SeniorShield)**:
 - Developed with Expo (React Native) and Expo Router v6, targeting iOS and Airbnb-inspired design principles.
 - UI/UX: Features a clean blue color scheme (`#2563EB`) and the Inter font.
-- Core screens include authentication, onboarding, main tabs (home, scam, family, settings), subscription management, and an emergency screen.
+- Core screens include authentication, onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
+- Daily Reminders tab: Users can select up to 3 active reminders from presets (medication, family call, morning walk, wellness check, hydration, meals, appointments, gratitude) or create custom ones. The AI assistant uses these to greet users daily. Toggles available per-reminder. Backend stores preferences in `daily_reminders` table and responses in `daily_reminder_responses` table.
 - Authentication uses JWT tokens stored in `AsyncStorage` and managed via `AuthContext`.
 - The application integrates a centralized API service for all backend communication.
 

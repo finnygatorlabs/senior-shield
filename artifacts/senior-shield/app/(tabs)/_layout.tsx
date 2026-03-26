@@ -63,6 +63,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="reminders"
+        options={{
+          title: "Reminders",
+          tabBarIcon: ({ color, size }) => <Ionicons name="notifications" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="family"
         options={{
           title: "Family",
