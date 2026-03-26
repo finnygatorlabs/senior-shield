@@ -295,7 +295,7 @@ export default function ScamScreen() {
       <View style={[styles.inputCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={styles.inputHeader}>
           <Ionicons name="clipboard-outline" size={20} color={theme.textSecondary} />
-          <Text style={[styles.inputLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>Paste message here</Text>
+          <Text style={[styles.inputLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>Enter message here</Text>
           <Pressable onPress={() => setShowHelpModal(true)} hitSlop={12} style={styles.infoButton}>
             <Ionicons name="information-circle-outline" size={22} color={theme.textSecondary} />
           </Pressable>
@@ -304,7 +304,7 @@ export default function ScamScreen() {
           style={[styles.textArea, { color: theme.text, backgroundColor: theme.inputBackground, fontSize: ts.base }]}
           value={text}
           onChangeText={setText}
-          placeholder="Paste or type the suspicious message, email, or text..."
+          placeholder="Enter or paste the suspicious message, email, or text..."
           placeholderTextColor={theme.placeholder}
           multiline
           numberOfLines={6}
