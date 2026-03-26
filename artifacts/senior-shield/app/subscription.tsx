@@ -54,70 +54,28 @@ function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top
   );
 }
 
-type PaymentMethod = 'stripe' | 'verizon' | 'att' | 'tmobile' | 'medicare';
+type PaymentMethod = 'stripe' | 'carrier' | 'insurance';
 
-interface PaymentOption {
-  id: PaymentMethod;
+interface CarrierOption {
+  id: string;
   name: string;
-  icon: string;
-  description: string;
   price: string;
-  status: 'active' | 'coming-soon';
-  color: string;
-  backgroundColor: string;
 }
 
-const PAYMENT_OPTIONS: PaymentOption[] = [
-  {
-    id: 'stripe',
-    name: 'Credit Card',
-    icon: 'card',
-    description: 'Pay securely with Visa, Mastercard, or American Express',
-    price: '',
-    status: 'active',
-    color: '#FFFFFF',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  {
-    id: 'verizon',
-    name: 'Verizon',
-    icon: 'phone-portrait',
-    description: 'Add to your Verizon bill',
-    price: '$5.99/month',
-    status: 'coming-soon',
-    color: '#EF4444',
-    backgroundColor: 'rgba(239,68,68,0.15)',
-  },
-  {
-    id: 'att',
-    name: 'AT&T',
-    icon: 'phone-portrait',
-    description: 'Add to your AT&T bill',
-    price: '$5.99/month',
-    status: 'coming-soon',
-    color: '#60A5FA',
-    backgroundColor: 'rgba(96,165,250,0.15)',
-  },
-  {
-    id: 'tmobile',
-    name: 'T-Mobile',
-    icon: 'phone-portrait',
-    description: 'Add to your T-Mobile bill',
-    price: '$5.99/month',
-    status: 'coming-soon',
-    color: '#F472B6',
-    backgroundColor: 'rgba(244,114,182,0.15)',
-  },
-  {
-    id: 'medicare',
-    name: 'Medicare Advantage',
-    icon: 'shield-checkmark',
-    description: 'Covered by your Medicare plan',
-    price: 'Free - $5 copay',
-    status: 'coming-soon',
-    color: '#34D399',
-    backgroundColor: 'rgba(52,211,153,0.15)',
-  },
+const CARRIER_OPTIONS: CarrierOption[] = [
+  { id: 'verizon', name: 'Verizon', price: '$5.99/month' },
+  { id: 'att', name: 'AT&T', price: '$5.99/month' },
+  { id: 'tmobile', name: 'T-Mobile', price: '$5.99/month' },
+  { id: 'sprint', name: 'Sprint', price: '$5.99/month' },
+  { id: 'uscellular', name: 'US Cellular', price: '$5.99/month' },
+];
+
+const INSURANCE_OPTIONS: CarrierOption[] = [
+  { id: 'medicare', name: 'Medicare Advantage', price: 'Free - $5 copay' },
+  { id: 'aetna', name: 'Aetna', price: 'Free - $5 copay' },
+  { id: 'united', name: 'UnitedHealthcare', price: 'Free - $5 copay' },
+  { id: 'humana', name: 'Humana', price: 'Free - $5 copay' },
+  { id: 'cigna', name: 'Cigna', price: 'Free - $5 copay' },
 ];
 
 export default function SubscriptionScreen() {
@@ -126,6 +84,10 @@ export default function SubscriptionScreen() {
   const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('stripe');
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null);
+  const [selectedInsurance, setSelectedInsurance] = useState<string | null>(null);
+  const [carrierDropdownOpen, setCarrierDropdownOpen] = useState(false);
+  const [insuranceDropdownOpen, setInsuranceDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const planDetails = selectedPlan === 'monthly'
@@ -133,11 +95,10 @@ export default function SubscriptionScreen() {
     : { label: 'Premium Annual', price: '$99.99/year', renewal: 'Auto-renews yearly (save 36%)' };
 
   const handleSelectMethod = (method: PaymentMethod) => {
-    const option = PAYMENT_OPTIONS.find((o) => o.id === method);
-    if (option?.status === 'coming-soon') {
+    if (method === 'carrier' || method === 'insurance') {
       Alert.alert(
         'Coming Soon',
-        `${option.name} integration is coming soon. We'll notify you when it's available.\n\nFor now, please select Credit Card to get started.`,
+        `${method === 'carrier' ? 'Carrier billing' : 'Insurance'} integration is coming soon. We'll notify you when it's available.\n\nFor now, please select Credit Card to get started.`,
         [{ text: 'OK' }]
       );
       return;
@@ -175,20 +136,11 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const handleContactSales = (method: PaymentMethod) => {
-    const option = PAYMENT_OPTIONS.find((o) => o.id === method);
+  const handleNotifyMe = (type: 'carrier' | 'insurance', name: string) => {
     Alert.alert(
-      'Contact Sales',
-      `Interested in ${option?.name} integration?\n\nEmail us at sales@seniorshield.app`,
-      [
-        {
-          text: 'Copy Email',
-          onPress: () => {
-            Alert.alert('Email copied to clipboard');
-          },
-        },
-        { text: 'Cancel' },
-      ]
+      'Notify Me',
+      `We'll let you know when ${name} billing is available!`,
+      [{ text: 'OK' }]
     );
   };
 
@@ -249,20 +201,110 @@ export default function SubscriptionScreen() {
         </View>
 
         <View style={styles.optionsContainer}>
-          {PAYMENT_OPTIONS.map((option) => {
-            const displayOption = option.id === 'stripe'
-              ? { ...option, price: planDetails.price }
-              : option;
-            return (
-              <PaymentOptionCard
-                key={option.id}
-                option={displayOption}
-                isSelected={selectedMethod === option.id}
-                onSelect={() => handleSelectMethod(option.id)}
-                onContactSales={() => handleContactSales(option.id)}
-              />
-            );
-          })}
+          <TouchableOpacity
+            style={[styles.optionCard, selectedMethod === 'stripe' && styles.optionCardSelected]}
+            onPress={() => setSelectedMethod('stripe')}
+          >
+            <View style={styles.optionCardHeader}>
+              <View style={styles.optionCardLeft}>
+                {selectedMethod === 'stripe' && (
+                  <View style={styles.checkCircle}>
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  </View>
+                )}
+                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                  <Ionicons name="card" size={20} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.optionName}>Credit Card</Text>
+                  <Text style={styles.optionDesc}>Pay securely with Visa, Mastercard, or American Express</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.optionPrice}>{planDetails.price}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dropdownSection}>
+            <TouchableOpacity
+              style={[styles.dropdownHeader, carrierDropdownOpen && styles.dropdownHeaderOpen]}
+              onPress={() => setCarrierDropdownOpen(!carrierDropdownOpen)}
+            >
+              <View style={styles.dropdownHeaderLeft}>
+                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(239,68,68,0.15)' }]}>
+                  <Ionicons name="phone-portrait" size={20} color="#EF4444" />
+                </View>
+                <View>
+                  <Text style={styles.optionName}>Carrier Billing</Text>
+                  <Text style={styles.optionDesc}>Add to your phone bill</Text>
+                </View>
+              </View>
+              <View style={styles.dropdownRight}>
+                <View style={styles.comingSoonBadge}>
+                  <Text style={styles.comingSoonText}>Coming Soon</Text>
+                </View>
+                <Ionicons name={carrierDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+              </View>
+            </TouchableOpacity>
+            {carrierDropdownOpen && (
+              <View style={styles.dropdownList}>
+                {CARRIER_OPTIONS.map((carrier) => (
+                  <View key={carrier.id} style={styles.dropdownItem}>
+                    <View>
+                      <Text style={styles.dropdownItemName}>{carrier.name}</Text>
+                      <Text style={styles.dropdownItemPrice}>{carrier.price}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.notifyButton}
+                      onPress={() => handleNotifyMe('carrier', carrier.name)}
+                    >
+                      <Text style={styles.notifyButtonText}>Notify Me</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.dropdownSection}>
+            <TouchableOpacity
+              style={[styles.dropdownHeader, insuranceDropdownOpen && styles.dropdownHeaderOpen]}
+              onPress={() => setInsuranceDropdownOpen(!insuranceDropdownOpen)}
+            >
+              <View style={styles.dropdownHeaderLeft}>
+                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(52,211,153,0.15)' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#34D399" />
+                </View>
+                <View>
+                  <Text style={styles.optionName}>Insurance</Text>
+                  <Text style={styles.optionDesc}>Covered by your health plan</Text>
+                </View>
+              </View>
+              <View style={styles.dropdownRight}>
+                <View style={styles.comingSoonBadge}>
+                  <Text style={styles.comingSoonText}>Coming Soon</Text>
+                </View>
+                <Ionicons name={insuranceDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+              </View>
+            </TouchableOpacity>
+            {insuranceDropdownOpen && (
+              <View style={styles.dropdownList}>
+                {INSURANCE_OPTIONS.map((ins) => (
+                  <View key={ins.id} style={styles.dropdownItem}>
+                    <View>
+                      <Text style={styles.dropdownItemName}>{ins.name}</Text>
+                      <Text style={styles.dropdownItemPrice}>{ins.price}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.notifyButton}
+                      onPress={() => handleNotifyMe('insurance', ins.name)}
+                    >
+                      <Text style={styles.notifyButtonText}>Notify Me</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
 
         {selectedMethod === 'stripe' && (
@@ -332,106 +374,6 @@ export default function SubscriptionScreen() {
   );
 }
 
-interface PaymentOptionCardProps {
-  option: PaymentOption;
-  isSelected: boolean;
-  onSelect: () => void;
-  onContactSales: () => void;
-}
-
-function PaymentOptionCard({
-  option,
-  isSelected,
-  onSelect,
-  onContactSales,
-}: PaymentOptionCardProps) {
-  const isComingSoon = option.status === 'coming-soon';
-
-  return (
-    <TouchableOpacity
-      style={[
-        styles.optionCard,
-        isSelected && !isComingSoon && styles.optionCardSelected,
-        isComingSoon && styles.optionCardDisabled,
-      ]}
-      onPress={onSelect}
-      disabled={isComingSoon}
-    >
-      {!isComingSoon && (
-        <View style={[styles.selectionIndicator, isSelected && styles.selectionIndicatorActive]}>
-          {isSelected && (
-            <View style={styles.selectionDot}>
-              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-            </View>
-          )}
-        </View>
-      )}
-
-      {isComingSoon && (
-        <View style={styles.comingSoonBadge}>
-          <Text style={styles.comingSoonText}>Coming Soon</Text>
-        </View>
-      )}
-
-      <View style={styles.optionContent}>
-        <View style={styles.optionHeader}>
-          <View
-            style={[
-              styles.iconContainer,
-              {
-                backgroundColor: option.backgroundColor,
-                opacity: isComingSoon ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Ionicons
-              name={option.icon as any}
-              size={24}
-              color={option.color}
-            />
-          </View>
-          <View style={styles.optionInfo}>
-            <Text
-              style={[
-                styles.optionName,
-                isComingSoon && styles.optionNameDisabled,
-              ]}
-            >
-              {option.name}
-            </Text>
-            <Text
-              style={[
-                styles.optionDescription,
-                isComingSoon && styles.optionDescriptionDisabled,
-              ]}
-            >
-              {option.description}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.optionFooter}>
-          <Text
-            style={[
-              styles.optionPrice,
-              isComingSoon && styles.optionPriceDisabled,
-            ]}
-          >
-            {option.price}
-          </Text>
-          {isComingSoon && (
-            <TouchableOpacity
-              style={styles.contactButton}
-              onPress={onContactSales}
-            >
-              <Text style={styles.contactButtonText}>Notify Me</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 interface DetailItemProps {
   icon: string;
@@ -579,110 +521,121 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.12)',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
   },
   optionCardSelected: {
     borderColor: 'rgba(52,211,153,0.5)',
     backgroundColor: 'rgba(52,211,153,0.1)',
   },
-  optionCardDisabled: {
-    opacity: 0.5,
-  },
-
-  selectionIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    marginRight: 12,
-    justifyContent: 'center',
+  optionCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  selectionIndicatorActive: {
-    borderColor: '#34D399',
+  optionCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
   },
-  selectionDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#34D399',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  comingSoonBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(251,191,36,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  comingSoonText: {
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#FBBF24',
-  },
-
-  optionContent: {
-    flex: 1,
-  },
-
-  optionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  optionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  optionInfo: {
-    flex: 1,
   },
   optionName: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
-  optionNameDisabled: {
-    color: 'rgba(255,255,255,0.4)',
-  },
-  optionDescription: {
-    fontSize: 13,
+  optionDesc: {
+    fontSize: 12,
     fontFamily: 'Inter_400Regular',
     color: 'rgba(255,255,255,0.6)',
-    lineHeight: 18,
-  },
-  optionDescriptionDisabled: {
-    color: 'rgba(255,255,255,0.3)',
-  },
-
-  optionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginTop: 2,
   },
   optionPrice: {
     fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Inter_700Bold',
     color: '#34D399',
-  },
-  optionPriceDisabled: {
-    color: 'rgba(255,255,255,0.3)',
+    marginLeft: 72,
   },
 
-  contactButton: {
+  dropdownSection: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  dropdownHeaderOpen: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  dropdownHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  dropdownRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  comingSoonBadge: {
+    backgroundColor: 'rgba(251,191,36,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,191,36,0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#FBBF24',
+  },
+  dropdownList: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  dropdownItemName: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  dropdownItemPrice: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 2,
+  },
+  notifyButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -690,7 +643,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(251,191,36,0.3)',
     backgroundColor: 'rgba(251,191,36,0.1)',
   },
-  contactButtonText: {
+  notifyButtonText: {
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
     color: '#FBBF24',
