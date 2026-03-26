@@ -199,7 +199,7 @@ export default function SubscriptionScreen() {
       <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
