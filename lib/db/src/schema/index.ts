@@ -433,6 +433,7 @@ export const dailyRemindersTable = pgTable("daily_reminders", {
   is_active: boolean("is_active").default(true),
   is_custom: boolean("is_custom").default(false),
   sort_order: integer("sort_order").default(0),
+  metadata: jsonb("metadata"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 }, (t) => [unique().on(t.user_id, t.reminder_key)]);

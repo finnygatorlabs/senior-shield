@@ -57,6 +57,21 @@ const PRESET_REMINDERS = [
     prompt: "{name}, what's one thing you're grateful for today?",
     icon: "sunny-outline",
   },
+  {
+    key: "daily_motivation",
+    label: "Daily Motivation",
+    prompt: "{name}, here is today's motivational quote to inspire your day.",
+    icon: "sparkles-outline",
+    hasCategories: true,
+    categories: [
+      { key: "spiritual", label: "Spiritual Motivation (Bible)" },
+      { key: "stoic", label: "Stoic Philosophy" },
+      { key: "modern_leadership", label: "Modern Leadership & Self-Improvement" },
+      { key: "eastern", label: "Eastern Philosophies" },
+      { key: "philanthropic", label: "Philanthropic & Business Wisdom" },
+      { key: "mix", label: "Mix of All" },
+    ],
+  },
 ];
 
 router.get("/presets", (_req, res) => {
@@ -80,7 +95,7 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { reminder_key, label, prompt, icon, is_custom } = req.body;
+    const { reminder_key, label, prompt, icon, is_custom, metadata } = req.body;
 
     if (!reminder_key || !label || !prompt) {
       res.status(400).json({ error: "Bad Request", message: "reminder_key, label, and prompt are required" });
@@ -116,10 +131,11 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
         is_custom: is_custom || false,
         is_active: true,
         sort_order: existing.length,
+        metadata: metadata || null,
       })
       .onConflictDoUpdate({
         target: [dailyRemindersTable.user_id, dailyRemindersTable.reminder_key],
-        set: { is_active: true, label, prompt, icon, updated_at: new Date() },
+        set: { is_active: true, label, prompt, icon, metadata: metadata || null, updated_at: new Date() },
       })
       .returning();
 
@@ -174,6 +190,34 @@ router.put("/:id/toggle", requireAuth, async (req: AuthRequest, res) => {
     res.json({ reminder: updated });
   } catch (err) {
     req.log.error({ err }, "Toggle reminder error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.put("/:id/metadata", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { metadata } = req.body;
+
+    const [updated] = await db
+      .update(dailyRemindersTable)
+      .set({ metadata, updated_at: new Date() })
+      .where(
+        and(
+          eq(dailyRemindersTable.id, id),
+          eq(dailyRemindersTable.user_id, req.user!.userId)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Not Found" });
+      return;
+    }
+
+    res.json({ reminder: updated });
+  } catch (err) {
+    req.log.error({ err }, "Update reminder metadata error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
