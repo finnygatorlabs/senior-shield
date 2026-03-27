@@ -999,7 +999,7 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <View style={[styles.quoteAccentBox, { borderLeftColor: theme.primary }]}>
+          <View style={[styles.quoteAccentBox, { borderLeftColor: "rgba(96,165,250,0.6)" }]}>
             <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
               {dailyQuote.text}
             </Text>
