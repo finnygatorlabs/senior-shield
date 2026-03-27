@@ -26,7 +26,26 @@ async function extractImageText(filePath: string, mimeType: string): Promise<str
   if (!openaiKey) return "";
   const buffer = await fs.readFile(filePath);
   const base64 = buffer.toString("base64");
-  const dataUrl = `data:${mimeType};base64,${base64}`;
+
+  const isPdf = mimeType === "application/pdf";
+  const contentParts: any[] = [
+    {
+      type: "text",
+      text: "Extract ALL text from this document exactly as it appears. Include every word, number, URL, email address, phone number, and symbol. Do not summarize or interpret — just extract the raw text. If there is no text, reply with EMPTY.",
+    },
+  ];
+
+  if (isPdf) {
+    contentParts.push({
+      type: "file",
+      file: { filename: "document.pdf", file_data: `data:application/pdf;base64,${base64}` },
+    });
+  } else {
+    contentParts.push({
+      type: "image_url",
+      image_url: { url: `data:${mimeType};base64,${base64}`, detail: "high" },
+    });
+  }
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -36,24 +55,17 @@ async function extractImageText(filePath: string, mimeType: string): Promise<str
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract ALL text from this image exactly as it appears. Include every word, number, URL, email address, phone number, and symbol. Do not summarize or interpret — just extract the raw text. If there is no text, reply with EMPTY.",
-            },
-            { type: "image_url", image_url: { url: dataUrl, detail: "high" } },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content: contentParts }],
       max_tokens: 2000,
       temperature: 0,
     }),
   });
 
-  if (!res.ok) return "";
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => "");
+    console.error("OpenAI OCR error:", res.status, errBody);
+    return "";
+  }
   const data = (await res.json()) as any;
   const extracted = data.choices?.[0]?.message?.content?.trim() || "";
   return extracted === "EMPTY" ? "" : extracted;
@@ -147,7 +159,11 @@ router.post("/analyze-attachment", requireAuth, upload.single("file"), async (re
           extractedText = extractedText ? `${extractedText}\n\n--- Attached file content ---\n${content}` : content;
         } else if (file.mimetype === "application/pdf") {
           req.log.info({ filename: file.originalname }, "Extracting text from PDF");
-          const pdfContent = await extractPdfText(file.path);
+          let pdfContent = await extractPdfText(file.path);
+          if (!pdfContent.trim()) {
+            req.log.info({ filename: file.originalname }, "PDF has no selectable text, falling back to OCR");
+            pdfContent = await extractImageText(file.path, "application/pdf");
+          }
           if (pdfContent.trim()) {
             extractedText = extractedText
               ? `${extractedText}\n\n--- Extracted from PDF: ${file.originalname} ---\n${pdfContent}`
