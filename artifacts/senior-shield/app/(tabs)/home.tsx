@@ -228,7 +228,7 @@ export default function HomeScreen() {
   const touchInactivity = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = setTimeout(() => {
-      if (!conversationActiveRef.current && !isSendingRef.current && !isSpeakingRef.current) {
+      if (!isSendingRef.current && !isSpeakingRef.current && !isListeningRef.current) {
         resetToIdleRef.current();
       }
     }, INACTIVITY_TIMEOUT);
@@ -257,6 +257,8 @@ export default function HomeScreen() {
   // State refs so recognition callbacks (stale closures) can always read current state
   const isSendingRef = useRef(false);
   useEffect(() => { isSendingRef.current = isSending; }, [isSending]);
+  const isListeningRef = useRef(false);
+  useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
   const isSpeakingRef = useRef(false);
   useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
   // speakTextRef lets sendMessage (captured inside startListening) always call the latest speakText
@@ -548,10 +550,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!isSpeaking && greeted && !isListening && !isSending) {
+    if (greeted && !isSpeaking && !isListening && !isSending) {
       touchInactivity();
+    } else if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
-  }, [isSpeaking]);
+  }, [isSpeaking, isListening, isSending, greeted]);
 
   const resetToIdle = useCallback(() => {
     stopSpeaking();
