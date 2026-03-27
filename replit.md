@@ -20,7 +20,7 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 - Developed with Expo (React Native) and Expo Router v6, targeting iOS and Airbnb-inspired design principles.
 - UI/UX: Features a clean blue color scheme (`#2563EB`) and the Inter font.
 - Core screens include authentication, onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
-- Daily Reminders tab: Users can select up to 3 active reminders from 9 presets (medication, family call, morning walk, wellness check, hydration, meals, appointments, gratitude, daily motivation) or create custom ones. The AI assistant uses these to greet users daily. Toggles available per-reminder. Backend stores preferences in `daily_reminders` table (with jsonb `metadata` column for extra config) and responses in `daily_reminder_responses` table. The "Daily Motivation" preset has a category selector (Spiritual/Bible, Stoic Philosophy, Modern Leadership, Eastern Philosophies, Philanthropic/Business Wisdom, Mix) stored in metadata. Users can change their category anytime via a "Change" button on their reminder card.
+- Daily Reminders tab: Users can select up to 3 active reminders from 8 presets (medication, family call, morning walk, wellness check, hydration, meals, appointments, gratitude) or create custom ones. The AI assistant uses these to greet users daily. Toggles available per-reminder. Backend stores preferences in `daily_reminders` table (with jsonb `metadata` column for extra config) and responses in `daily_reminder_responses` table.
 - Authentication uses JWT tokens stored in `AsyncStorage` and managed via `AuthContext`. Global session expiry detection: `api.ts` emits `sessionExpired` on any 401 response; `AuthContext` listens and auto-clears auth state + shows user-facing alert.
 - The application integrates a centralized API service (`services/api.ts`) for all backend communication, with a custom lightweight event system (`apiEvents`) for cross-cutting concerns like session expiry.
 
@@ -29,7 +29,7 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 - Employs Zod for validation of API requests and responses.
 - API codegen is handled by Orval from an OpenAPI specification, generating React Query hooks and Zod schemas.
 - Features comprehensive API endpoints for authentication, user management, voice assistance (AI queries, TTS), scam detection, family management, contact management, billing (Stripe integration), emergency services, hearing aid connectivity, administration, analytics, telecom, insurance, and facility management.
-- Voice AI system prompt dynamically fetches the user's active daily reminders (including Daily Motivation category metadata) and injects category-specific instructions so the AI provides the correct type of motivational quote. Reminder labels are sanitized before prompt injection to prevent prompt injection attacks.
+- Voice AI system prompt dynamically fetches the user's active daily reminders and injects them into the conversation context. Reminder labels are sanitized before prompt injection to prevent prompt injection attacks.
 - Middleware includes rate limiting, standardized error handling, and 404 management.
 
 **Database**:

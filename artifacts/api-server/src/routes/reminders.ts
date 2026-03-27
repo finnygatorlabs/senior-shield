@@ -57,12 +57,6 @@ const PRESET_REMINDERS = [
     prompt: "{name}, what's one thing you're grateful for today?",
     icon: "sunny-outline",
   },
-  {
-    key: "daily_motivation",
-    label: "Daily Motivation",
-    prompt: "{name}, here is today's motivational quote to inspire your day.",
-    icon: "sparkles-outline",
-  },
 ];
 
 router.get("/presets", (_req, res) => {

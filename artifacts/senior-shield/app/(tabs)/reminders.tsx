@@ -52,12 +52,6 @@ const FALLBACK_PRESETS: Preset[] = [
   { key: "meals", label: "Meal Reminder", prompt: "{name}, have you eaten today? A good meal will help keep your energy up.", icon: "restaurant-outline" },
   { key: "appointments", label: "Appointment Check", prompt: "{name}, do you have any appointments today? Let me help you stay on track.", icon: "calendar-outline" },
   { key: "gratitude", label: "Gratitude Moment", prompt: "{name}, what's one thing you're grateful for today?", icon: "sunny-outline" },
-  {
-    key: "daily_motivation",
-    label: "Daily Motivation",
-    prompt: "{name}, here is today's motivational quote to inspire your day.",
-    icon: "sparkles-outline",
-  },
 ];
 
 export default function RemindersScreen() {

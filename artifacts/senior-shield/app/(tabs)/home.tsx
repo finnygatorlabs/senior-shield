@@ -23,7 +23,6 @@ import FluidOrb from "@/components/FluidOrb";
 import PageHeader from "@/components/PageHeader";
 import MicPermissionModal from "@/components/MicPermissionModal";
 import { voiceApi, conversationApi, userApi, API_BASE } from "@/services/api";
-import { DAILY_QUOTES, getDailyQuote } from "@/constants/dailyQuotes";
 
 // Remove markdown formatting before sending text to TTS so the voice
 // never reads aloud characters like **, *, #, -, _, ~, backticks, etc.
