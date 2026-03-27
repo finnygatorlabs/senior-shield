@@ -147,7 +147,7 @@ function layer1_categoryDetection(text: string): LayerResult & { matchedCategori
       }
     }
 
-    const keywordScore = Math.min(keywordHits.length * 4, 20);
+    const keywordScore = Math.min(keywordHits.length * 4, 30);
     const redFlagScore = Math.min(redFlagHits.length * 6, 24);
     const rawScore = keywordScore + redFlagScore;
 
@@ -163,7 +163,7 @@ function layer1_categoryDetection(text: string): LayerResult & { matchedCategori
   const topCategories = matchedCategories.slice(0, 5);
 
   for (const match of topCategories) {
-    const catScore = Math.min(match.rawScore, 20);
+    const catScore = Math.min(match.rawScore, 30);
     score += catScore;
 
     if (match.redFlagHits.length > 0) {
@@ -179,8 +179,8 @@ function layer1_categoryDetection(text: string): LayerResult & { matchedCategori
 
   return {
     name: "Industry Category Detection",
-    score: Math.min(score, 35),
-    maxScore: 35,
+    score: Math.min(score, 40),
+    maxScore: 40,
     findings,
     matchedCategories,
     allKeywords: [...new Set(allKeywords)],
