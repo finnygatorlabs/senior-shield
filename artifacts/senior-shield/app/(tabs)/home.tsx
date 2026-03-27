@@ -999,16 +999,13 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <View style={styles.quoteAccentRow}>
-            <View style={[styles.quoteAccentLine, { backgroundColor: theme.primary }]} />
-            <View style={styles.quoteContent}>
-              <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
-                {dailyQuote.text}
-              </Text>
-              <Text style={[styles.quoteAuthor, { color: theme.textSecondary, fontSize: ts.sm }]}>
-                — {dailyQuote.author}
-              </Text>
-            </View>
+          <View style={[styles.quoteAccentBox, { borderLeftColor: theme.primary }]}>
+            <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
+              {dailyQuote.text}
+            </Text>
+            <Text style={[styles.quoteAuthor, { color: theme.textSecondary, fontSize: ts.sm }]}>
+              — {dailyQuote.author}
+            </Text>
           </View>
         </Animated.View>
       )}
@@ -1206,17 +1203,10 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 12,
   },
-  quoteAccentRow: {
-    flexDirection: "row",
-  },
-  quoteAccentLine: {
-    width: 3,
+  quoteAccentBox: {
+    borderLeftWidth: 3,
     borderRadius: 2,
-    marginRight: 14,
-    alignSelf: "stretch",
-  },
-  quoteContent: {
-    flex: 1,
+    paddingLeft: 14,
   },
   quoteText: {
     fontFamily: "Inter_400Regular",
