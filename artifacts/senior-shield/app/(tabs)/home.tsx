@@ -999,8 +999,13 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <View style={styles.quoteWrap}>
-            <Text style={styles.quoteDecorMark}>{"\u201C"}</Text>
+          <View style={styles.quoteGlowWrap}>
+            <LinearGradient
+              colors={["rgba(96,165,250,0.12)", "rgba(96,165,250,0.04)", "transparent"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.quoteGlow}
+            />
             <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
               {dailyQuote.text}
             </Text>
@@ -1204,17 +1209,17 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 12,
   },
-  quoteWrap: {
+  quoteGlowWrap: {
     position: "relative",
+    paddingVertical: 4,
   },
-  quoteDecorMark: {
+  quoteGlow: {
     position: "absolute",
-    top: -28,
-    left: -6,
-    fontSize: 72,
-    lineHeight: 72,
-    fontFamily: "Inter_700Bold",
-    color: "rgba(96,165,250,0.15)",
+    top: -8,
+    left: -24,
+    right: -24,
+    bottom: -8,
+    borderRadius: 16,
   },
   quoteText: {
     fontFamily: "Inter_400Regular",
