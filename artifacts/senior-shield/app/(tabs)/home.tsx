@@ -203,6 +203,7 @@ export default function HomeScreen() {
   const quoteSlideAnim = useRef(new Animated.Value(0)).current;
   const quoteOpacityAnim = useRef(new Animated.Value(1)).current;
   const [quoteDismissed, setQuoteDismissed] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const screenWidth = Dimensions.get("window").width;
 
   const dismissQuote = useCallback(() => {
@@ -550,13 +551,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (greeted && !isSpeaking && !isListening && !isSending) {
+    if (hasInteracted && greeted && !isSpeaking && !isListening && !isSending) {
       touchInactivity();
     } else if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = null;
     }
-  }, [isSpeaking, isListening, isSending, greeted]);
+  }, [isSpeaking, isListening, isSending, greeted, hasInteracted]);
 
   const resetToIdle = useCallback(() => {
     stopSpeaking();
@@ -572,6 +573,7 @@ export default function HomeScreen() {
     setInterimText("");
     noSpeechRetryRef.current = 0;
     sessionIdRef.current = null;
+    setHasInteracted(false);
     setQuoteDismissed(false);
     quoteSlideAnim.setValue(0);
     quoteOpacityAnim.setValue(1);
@@ -823,6 +825,8 @@ export default function HomeScreen() {
   // ── Send message ──
   async function sendMessage(text: string) {
     if (!text.trim() || isSending) return;
+    setHasInteracted(true);
+    if (inactivityTimerRef.current) { clearTimeout(inactivityTimerRef.current); inactivityTimerRef.current = null; }
     stopSpeaking();
     stopListening();
 
@@ -884,6 +888,7 @@ export default function HomeScreen() {
   }
 
   function handleOrbPress() {
+    setHasInteracted(true);
     if (inactivityTimerRef.current) { clearTimeout(inactivityTimerRef.current); inactivityTimerRef.current = null; }
     dismissQuote();
     // Always create the AudioContext on the FIRST user gesture regardless of audioReady.
@@ -1164,7 +1169,7 @@ export default function HomeScreen() {
 
           {/* "Type instead" — subtle pill button */}
           <Pressable
-            onPress={() => { dismissQuote(); stopListening(); stopSpeaking(); setShowText(true); }}
+            onPress={() => { setHasInteracted(true); dismissQuote(); stopListening(); stopSpeaking(); setShowText(true); }}
             hitSlop={16}
             style={[
               styles.typeBtn,
