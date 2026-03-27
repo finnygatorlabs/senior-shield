@@ -18,7 +18,7 @@ import telecomRouter from "./telecom.js";
 import insuranceRouter from "./insurance.js";
 import facilitiesRouter from "./facilities.js";
 import remindersRouter from "./reminders.js";
-import dailyQuoteRouter from "./dailyQuote.js";
+
 import { authLimiter, scamLimiter, voiceLimiter } from "../lib/rateLimit.js";
 
 const router: IRouter = Router();
@@ -42,6 +42,5 @@ router.use("/telecom", telecomRouter);
 router.use("/insurance", insuranceRouter);
 router.use("/facilities", facilitiesRouter);
 router.use("/reminders", remindersRouter);
-router.use("/daily-quote", dailyQuoteRouter);
 
 export default router;

@@ -448,16 +448,6 @@ export const insertDailyReminderSchema = createInsertSchema(dailyRemindersTable)
 export type DailyReminder = typeof dailyRemindersTable.$inferSelect;
 export type InsertDailyReminder = z.infer<typeof insertDailyReminderSchema>;
 
-export const dailyQuoteCacheTable = pgTable("daily_quote_cache", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  quote_date: date("quote_date").notNull().unique(),
-  text: text("text").notNull(),
-  author: varchar("author").notNull(),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-export type DailyQuoteCache = typeof dailyQuoteCacheTable.$inferSelect;
-
 export const dailyReminderResponsesTable = pgTable("daily_reminder_responses", {
   id: uuid("id").primaryKey().defaultRandom(),
   user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
