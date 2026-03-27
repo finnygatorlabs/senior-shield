@@ -950,12 +950,11 @@ export default function HomeScreen() {
 
 
   const orbBottomPad = tabBarHeight + insets.bottom + 8;
-  // Orb is compact once the conversation starts and stays compact for the entire session.
-  // Full size is only shown before the first tap — it invites the senior to begin.
-  // Keeping it compact through listening/speaking/idle maximises message visibility.
-  const isOrbCompact = greeted;
+  // Orb is compact once the user has engaged (quote dismissed). Returns to full size
+  // when the inactivity timer resets the screen (quoteDismissed goes back to false).
+  const isOrbCompact = greeted && quoteDismissed;
   // Idle = compact + not actively listening/speaking (used for status row + "Type instead" logic)
-  const isOrbIdle = greeted && !isListening && !isSpeaking;
+  const isOrbIdle = greeted && quoteDismissed && !isListening && !isSpeaking;
   // Compact footer: orb(100) + compactLabel(25) + typeBtn(32) + padding(16) + buffer(2) = ~175px
   // Full footer (pre-greeting): orb(176) + typeBtn(32) + padding(16) = ~224px
   const ORB_FOOTER_HEIGHT = isOrbCompact ? 175 : 224;
