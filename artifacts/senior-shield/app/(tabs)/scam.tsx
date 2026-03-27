@@ -250,11 +250,17 @@ export default function ScamScreen() {
       if (hasFile) {
         const formData = new FormData();
         if (hasText) formData.append("text", target);
-        formData.append("file", {
-          uri: attachment!.uri,
-          name: attachment!.name,
-          type: attachment!.type,
-        } as any);
+        if (Platform.OS === "web") {
+          const resp = await fetch(attachment!.uri);
+          const blob = await resp.blob();
+          formData.append("file", new File([blob], attachment!.name, { type: attachment!.type }));
+        } else {
+          formData.append("file", {
+            uri: attachment!.uri,
+            name: attachment!.name,
+            type: attachment!.type,
+          } as any);
+        }
         data = await scamApi.analyzeWithAttachment(formData, user?.token);
       } else {
         data = await scamApi.analyze(target, user?.token);
