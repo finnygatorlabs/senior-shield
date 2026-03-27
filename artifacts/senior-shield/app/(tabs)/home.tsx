@@ -999,7 +999,8 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <View style={[styles.quoteAccentBox, { borderLeftColor: "rgba(96,165,250,0.6)" }]}>
+          <View style={styles.quoteWrap}>
+            <Text style={styles.quoteDecorMark}>{"\u201C"}</Text>
             <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
               {dailyQuote.text}
             </Text>
@@ -1203,10 +1204,17 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 12,
   },
-  quoteAccentBox: {
-    borderLeftWidth: 3,
-    borderRadius: 2,
-    paddingLeft: 14,
+  quoteWrap: {
+    position: "relative",
+  },
+  quoteDecorMark: {
+    position: "absolute",
+    top: -28,
+    left: -6,
+    fontSize: 72,
+    lineHeight: 72,
+    fontFamily: "Inter_700Bold",
+    color: "rgba(96,165,250,0.15)",
   },
   quoteText: {
     fontFamily: "Inter_400Regular",
