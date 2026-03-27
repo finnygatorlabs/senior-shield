@@ -534,6 +534,24 @@ export default function SettingsScreen() {
           theme={theme}
           ts={ts}
         />
+
+        <SettingRow
+          icon="sparkles-outline"
+          label="Daily Quotes"
+          subtitle="Show an inspirational quote on the home screen"
+          rightContent={
+            <Switch
+              value={prefs.daily_quotes_enabled}
+              onValueChange={v => handlePrefChange("daily_quotes_enabled", v)}
+              trackColor={{ false: theme.border, true: "#BFDBFE" }}
+              thumbColor={prefs.daily_quotes_enabled ? "#2563EB" : "#9CA3AF"}
+            />
+          }
+          iconColor="#F59E0B"
+          iconBg="#FEF3C7"
+          theme={theme}
+          ts={ts}
+        />
       </View>
 
       {/* APPEARANCE */}

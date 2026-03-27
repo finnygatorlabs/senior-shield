@@ -42,6 +42,7 @@ export const usersTable = pgTable("users", {
   microphone_access: boolean("microphone_access").default(true),
   assistant_name: varchar("assistant_name"),
   tts_voice: varchar("tts_voice").default("nova"),
+  daily_quotes_enabled: boolean("daily_quotes_enabled").default(true),
   device_platform: varchar("device_platform"),
   device_model: varchar("device_model"),
   device_os_version: varchar("device_os_version"),

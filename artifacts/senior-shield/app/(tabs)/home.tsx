@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Platform,
   Modal,
   AppState,
+  Animated,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,6 +25,7 @@ import FluidOrb from "@/components/FluidOrb";
 import PageHeader from "@/components/PageHeader";
 import MicPermissionModal from "@/components/MicPermissionModal";
 import { voiceApi, conversationApi, userApi, API_BASE } from "@/services/api";
+import { getDailyQuote } from "@/constants/dailyQuotes";
 
 // Remove markdown formatting before sending text to TTS so the voice
 // never reads aloud characters like **, *, #, -, _, ~, backticks, etc.
@@ -195,6 +198,28 @@ export default function HomeScreen() {
   const [voiceMuted, setVoiceMuted] = useState(false);
   const voiceMutedRef = useRef(false);
   useEffect(() => { voiceMutedRef.current = voiceMuted; }, [voiceMuted]);
+
+  const dailyQuote = useMemo(() => getDailyQuote(), []);
+  const quoteSlideAnim = useRef(new Animated.Value(0)).current;
+  const quoteOpacityAnim = useRef(new Animated.Value(1)).current;
+  const [quoteDismissed, setQuoteDismissed] = useState(false);
+  const screenWidth = Dimensions.get("window").width;
+
+  const dismissQuote = useCallback(() => {
+    if (quoteDismissed) return;
+    Animated.parallel([
+      Animated.timing(quoteSlideAnim, {
+        toValue: screenWidth,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(quoteOpacityAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setQuoteDismissed(true));
+  }, [quoteDismissed, screenWidth]);
 
   // Conversation session ID — created on first exchange, used to append subsequent turns
   const sessionIdRef = useRef<string | null>(null);
@@ -807,6 +832,7 @@ export default function HomeScreen() {
   }
 
   function handleOrbPress() {
+    dismissQuote();
     // Always create the AudioContext on the FIRST user gesture regardless of audioReady.
     // Chrome requires this synchronously inside a user gesture; doing it later loses the context.
     if (Platform.OS === "web" && typeof window !== "undefined" && !audioCtxRef.current) {
@@ -962,6 +988,26 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <PageHeader showTagline greeting={headerGreeting} />
 
+      {/* ── Daily Quote Banner ── */}
+      {prefs.daily_quotes_enabled && !quoteDismissed && (
+        <Animated.View
+          style={[
+            styles.quoteBanner,
+            {
+              transform: [{ translateX: quoteSlideAnim }],
+              opacity: quoteOpacityAnim,
+            },
+          ]}
+        >
+          <Text style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
+            {dailyQuote.text}
+          </Text>
+          <Text style={[styles.quoteAuthor, { color: theme.textSecondary, fontSize: ts.sm }]}>
+            — {dailyQuote.author}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* ── Messages ── */}
       <ScrollView
         ref={scrollRef}
@@ -1063,7 +1109,7 @@ export default function HomeScreen() {
 
           {/* "Type instead" — subtle pill button */}
           <Pressable
-            onPress={() => { stopListening(); stopSpeaking(); setShowText(true); }}
+            onPress={() => { dismissQuote(); stopListening(); stopSpeaking(); setShowText(true); }}
             hitSlop={16}
             style={[
               styles.typeBtn,
@@ -1150,6 +1196,22 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  quoteBanner: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  quoteText: {
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic",
+    textAlign: "center",
+    lineHeight: 28,
+  },
+  quoteAuthor: {
+    fontFamily: "Inter_500Medium",
+    marginTop: 6,
+    textAlign: "center",
+  },
   messages: { flex: 1 },
   msgsContent: { paddingHorizontal: 14, paddingTop: 12, gap: 10 },
 
