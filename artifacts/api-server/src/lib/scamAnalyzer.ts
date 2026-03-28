@@ -459,7 +459,7 @@ function layer5_seniorVulnerability(
   };
 }
 
-function checkLegitimateMessage(text: string, entities: ExtractedEntities): { reduction: number; findings: string[] } {
+function checkLegitimateMessage(text: string, entities: ExtractedEntities): { reduction: number; findings: string[]; isSecurityNotification: boolean } {
   const lower = text.toLowerCase();
   let reduction = 0;
   const findings: string[] = [];
@@ -467,15 +467,71 @@ function checkLegitimateMessage(text: string, entities: ExtractedEntities): { re
   const allLegitSenders = Object.values(LEGITIMATE_SENDERS).flat();
   const mentionedSender = allLegitSenders.find(s => lower.includes(s));
 
+  const hasGiftCard = CROSS_CUTTING_KEYWORDS.giftCardPayment.some(k => lower.includes(k));
+  const hasSecrecy = CROSS_CUTTING_KEYWORDS.secrecy.some(k => lower.includes(k));
+
+  const protectivePhrases = [
+    "never share your password", "never ask for your", "will never ask",
+    "do not share your", "don't share your", "protect your password",
+    "never give your", "never provide your", "never ask you for your password",
+    "never request your", "we will never",
+  ];
+  const hasProtectiveLanguage = protectivePhrases.some(p => lower.includes(p));
+
+  const scamOnlyBlockers = ["gift card", "send money", "western union", "bitcoin",
+    "don't tell anyone", "keep this secret", "don't tell your family"];
+  const contextSensitiveBlockers = ["wire transfer", "social security number", "ssn", "password", "pin number"];
+
+  const hasScamOnlyBlocker = scamOnlyBlockers.some(k => lower.includes(k));
+  const hasContextBlocker = !hasProtectiveLanguage && contextSensitiveBlockers.some(k => lower.includes(k));
+  const hasHardBlocker = hasScamOnlyBlocker || hasContextBlocker;
+
   const hasUrgentFinancialRequest = CROSS_CUTTING_KEYWORDS.urgency.some(k => lower.includes(k)) &&
     CROSS_CUTTING_KEYWORDS.financial.some(k => lower.includes(k));
   const hasPersonalInfoRequest = CROSS_CUTTING_KEYWORDS.personalInfoRequest.some(k => lower.includes(k));
   const hasThreats = CROSS_CUTTING_KEYWORDS.threats.some(k => lower.includes(k));
-  const hasGiftCard = CROSS_CUTTING_KEYWORDS.giftCardPayment.some(k => lower.includes(k));
   const hasImpersonation = CROSS_CUTTING_KEYWORDS.impersonation.some(k => lower.includes(k));
-  const hasSecrecy = CROSS_CUTTING_KEYWORDS.secrecy.some(k => lower.includes(k));
 
   const hasAnyHighRiskIndicator = hasUrgentFinancialRequest || hasPersonalInfoRequest || hasThreats || hasGiftCard || hasImpersonation || hasSecrecy;
+
+  const securityNotificationKeywords = [
+    "security alert", "new device login", "new device", "unusual activity",
+    "suspicious activity", "unauthorized access", "confirm login",
+    "detected login", "sign-in from", "accessed from",
+  ];
+  const securityMatchCount = securityNotificationKeywords.filter(kw => lower.includes(kw)).length;
+  const isSecurityNotification = securityMatchCount >= 1;
+
+  const hasSuspiciousLinks = entities.urls.some(u => {
+    try {
+      const host = new URL(u).hostname.toLowerCase();
+      return !KNOWN_COMPANIES.some(c => c.domains.some(d => host === d || host.endsWith("." + d)));
+    } catch { return true; }
+  });
+
+  if (isSecurityNotification && mentionedSender && !hasHardBlocker && !hasSuspiciousLinks) {
+    reduction += 40;
+    findings.push(`Legitimate security notification from recognized sender "${mentionedSender}"`);
+
+    if (entities.senderDomain) {
+      const matchesSender = KNOWN_COMPANIES.some(c =>
+        c.name === mentionedSender &&
+        c.domains.some(d => entities.senderDomain === d || entities.senderDomain!.endsWith("." + d))
+      );
+      const isAnyOfficialDomain = !matchesSender && KNOWN_COMPANIES.some(c =>
+        c.domains.some(d => entities.senderDomain === d || entities.senderDomain!.endsWith("." + d))
+      );
+      if (matchesSender) {
+        reduction += 40;
+        findings.push(`Official sender domain "${entities.senderDomain}" matches recognized sender "${mentionedSender}"`);
+      } else if (isAnyOfficialDomain) {
+        reduction += 25;
+        findings.push(`Official sender domain "${entities.senderDomain}" verified`);
+      }
+    }
+
+    return { reduction: Math.min(reduction, 80), findings, isSecurityNotification: true };
+  }
 
   if (mentionedSender && !hasAnyHighRiskIndicator) {
     reduction += 25;
@@ -500,7 +556,7 @@ function checkLegitimateMessage(text: string, entities: ExtractedEntities): { re
     }
   }
 
-  return { reduction: Math.min(reduction, 50), findings };
+  return { reduction: Math.min(reduction, 60), findings, isSecurityNotification: false };
 }
 
 function getCompoundMultiplier(text: string): number {
@@ -536,11 +592,15 @@ export function analyzeScamText(text: string): FullAnalysis {
   const effectiveMultiplier = Math.max(l5.multiplier, compoundMultiplier);
 
   let adjustedScore = baseScore;
-  if (effectiveMultiplier > 1.0 && baseScore >= 20) {
-    adjustedScore = Math.round(baseScore * effectiveMultiplier);
-  }
 
-  adjustedScore = Math.max(0, adjustedScore - legitResult.reduction);
+  if (legitResult.reduction > 0 && legitResult.isSecurityNotification) {
+    adjustedScore = Math.max(0, adjustedScore - legitResult.reduction);
+  } else {
+    if (effectiveMultiplier > 1.0 && baseScore >= 20) {
+      adjustedScore = Math.round(baseScore * effectiveMultiplier);
+    }
+    adjustedScore = Math.max(0, adjustedScore - legitResult.reduction);
+  }
 
   const riskScore = Math.min(adjustedScore, 100);
 

@@ -1597,6 +1597,11 @@ export const SCAM_CATEGORIES: ScamCategory[] = [
       "burial insurance", "funeral insurance", "immediate need",
       "outstanding balance", "unpaid funeral", "additional fees",
       "transfer fee", "release fee", "transport fee",
+      "death", "condolences", "monument", "flowers",
+      "storage fee", "handling fee", "immediate payment",
+      "today only", "limited time", "family emergency",
+      "loss", "grief", "arrangements needed",
+      "plot", "cemetery plot",
     ],
     redFlags: [
       "pressure to prepay funeral",
@@ -1611,7 +1616,7 @@ export const SCAM_CATEGORIES: ScamCategory[] = [
       "fake obituary notice with payment request",
       "unsolicited funeral insurance with urgency",
     ],
-    minimumTriggerScore: 40,
+    minimumTriggerScore: 35,
   },
   {
     id: 75,
@@ -1629,6 +1634,10 @@ export const SCAM_CATEGORIES: ScamCategory[] = [
       "akc registered", "purebred", "pedigree",
       "deposit required", "non-refundable deposit",
       "available now", "last one", "many inquiries",
+      "foster", "breed", "wire transfer", "payment",
+      "immediately", "family moving", "overseas", "relocation",
+      "new home", "non-refundable", "hold", "secure", "available",
+      "deposit", "urgent",
     ],
     redFlags: [
       "unsolicited pet offer",
@@ -1644,7 +1653,7 @@ export const SCAM_CATEGORIES: ScamCategory[] = [
       "seller leaving country urgently needs to rehome",
       "cannot meet in person to see the pet",
     ],
-    minimumTriggerScore: 40,
+    minimumTriggerScore: 35,
   },
 ];
 
@@ -1913,8 +1922,8 @@ export const LEGITIMATE_PATTERNS = [
   },
   {
     name: "Security Notification",
-    keywords: ["detected login", "password changed", "accessed from", "new device", "sign-in from"],
-    scoreReduction: 15,
+    keywords: ["detected login", "password changed", "accessed from", "new device", "sign-in from", "security alert", "unusual activity", "new device login", "suspicious activity", "unauthorized access", "confirm login"],
+    scoreReduction: 25,
     description: "Legitimate security notification without request for personal info",
   },
   {
@@ -1982,11 +1991,11 @@ export const SCAM_COMPOUND_PATTERNS = [
   {
     name: "Funeral: Financial Request + Urgency",
     requiredGroups: [
-      ["funeral", "burial", "deceased", "cremation", "memorial", "remains"],
-      ["pay", "wire", "prepay", "immediately", "urgent", "transfer", "fee", "deposit"],
+      ["funeral", "burial", "deceased", "cremation", "memorial", "remains", "death", "casket"],
+      ["pay", "wire", "prepay", "immediately", "urgent", "transfer", "fee", "deposit", "payment"],
     ],
     riskBonus: 20,
-    multiplier: 2.0,
+    multiplier: 2.2,
     description: "Funeral scam combining death-related language with financial urgency",
   },
   {
@@ -2017,7 +2026,7 @@ export const SCAM_COMPOUND_PATTERNS = [
       ["urgent", "immediately", "quickly", "last one", "many inquiries", "leaving country"],
     ],
     riskBonus: 20,
-    multiplier: 2.0,
+    multiplier: 2.2,
     description: "Pet adoption scam with urgency and financial request",
   },
   {
@@ -2027,7 +2036,7 @@ export const SCAM_COMPOUND_PATTERNS = [
       ["deposit", "shipping fee", "transport fee", "wire", "transfer"],
     ],
     riskBonus: 18,
-    multiplier: 2.0,
+    multiplier: 2.2,
     description: "Fake urgent pet rehoming with financial request",
   },
 ];
