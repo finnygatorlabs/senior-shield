@@ -1,7 +1,7 @@
 import { Router, IRouter } from "express";
 import { db } from "@workspace/db";
 import { familyRelationshipsTable, usersTable } from "@workspace/db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 
 const router: IRouter = Router();
@@ -41,11 +41,26 @@ router.get("/members", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+const MAX_FAMILY_MEMBERS = 3;
+
 router.post("/add-member", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { adult_child_email, relationship } = req.body;
     if (!adult_child_email || !relationship) {
       res.status(400).json({ error: "Bad Request", message: "adult_child_email and relationship are required" });
+      return;
+    }
+
+    const existingMembers = await db
+      .select()
+      .from(familyRelationshipsTable)
+      .where(eq(familyRelationshipsTable.senior_id, req.user!.userId));
+
+    if (existingMembers.length >= MAX_FAMILY_MEMBERS) {
+      res.status(400).json({
+        error: "Limit reached",
+        message: `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`,
+      });
       return;
     }
 
@@ -88,9 +103,18 @@ router.post("/add-member", requireAuth, async (req: AuthRequest, res) => {
 router.delete("/member/:memberId", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { memberId } = req.params;
-    await db
+    const deleted = await db
       .delete(familyRelationshipsTable)
-      .where(eq(familyRelationshipsTable.id, memberId));
+      .where(and(
+        eq(familyRelationshipsTable.id, memberId),
+        eq(familyRelationshipsTable.senior_id, req.user!.userId),
+      ))
+      .returning();
+
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "Not Found", message: "Family member not found." });
+      return;
+    }
 
     res.json({ success: true, message: "Family member removed" });
   } catch (err) {

@@ -1,10 +1,11 @@
 import { Router, IRouter } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { scamAnalysisTable, scamDetectionFeedbackTable, scamLibraryTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { scamAnalysisTable, scamDetectionFeedbackTable, scamLibraryTable, familyRelationshipsTable, usersTable } from "@workspace/db";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 import { analyzeScamText } from "../lib/scamAnalyzer.js";
+import { sendScamAlertEmail } from "../lib/email.js";
 import fs from "fs/promises";
 
 async function extractPdfText(filePath: string): Promise<string> {
@@ -325,6 +326,86 @@ router.post("/feedback", requireAuth, async (req: AuthRequest, res) => {
     res.json({ success: true, message: "Feedback recorded. Thank you for helping improve scam detection!" });
   } catch (err) {
     req.log.error({ err }, "Scam feedback error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.post("/alert-family", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { scam_analysis_id } = req.body;
+    if (!scam_analysis_id) {
+      res.status(400).json({ error: "Bad Request", message: "scam_analysis_id is required" });
+      return;
+    }
+
+    const [analysis] = await db.select().from(scamAnalysisTable)
+      .where(eq(scamAnalysisTable.id, scam_analysis_id))
+      .limit(1);
+
+    if (!analysis || analysis.user_id !== req.user!.userId) {
+      res.status(404).json({ error: "Not Found" });
+      return;
+    }
+
+    const [sender] = await db.select().from(usersTable)
+      .where(eq(usersTable.id, req.user!.userId))
+      .limit(1);
+
+    const senderName = sender?.first_name
+      ? `${sender.first_name}${sender.last_name ? " " + sender.last_name : ""}`
+      : sender?.email || "A SeniorShield user";
+
+    const relationships = await db.select().from(familyRelationshipsTable)
+      .where(and(
+        eq(familyRelationshipsTable.senior_id, req.user!.userId),
+        eq(familyRelationshipsTable.scam_alerts, true),
+      ));
+
+    if (relationships.length === 0) {
+      res.status(400).json({ error: "No family members", message: "You don't have any family members with scam alerts enabled. Add family members in the Family tab." });
+      return;
+    }
+
+    const details = (analysis as any).analysis_details as any;
+    const scamCategory = details?.detected_patterns?.[0] || "Suspicious Message";
+    const riskLevel = (analysis as any).risk_level || "medium_risk";
+    const riskScore = parseInt((analysis as any).risk_score, 10) || 0;
+    const recommendation = riskLevel === "critical_risk" || riskLevel === "high_risk"
+      ? "Do NOT respond, click links, or share any information. This is very likely a scam."
+      : "Be cautious with this message. Do not share personal or financial information.";
+
+    let sent = 0;
+    for (const rel of relationships) {
+      try {
+        const [member] = await db.select().from(usersTable)
+          .where(eq(usersTable.id, rel.adult_child_id!))
+          .limit(1);
+        if (member?.email) {
+          await sendScamAlertEmail(
+            member.email,
+            member.first_name || null,
+            senderName,
+            riskScore,
+            riskLevel,
+            scamCategory,
+            recommendation,
+          );
+          sent++;
+        }
+      } catch (emailErr) {
+        req.log.error({ err: emailErr, memberId: rel.adult_child_id }, "Failed to send scam alert email");
+      }
+    }
+
+    if (sent > 0) {
+      await db.update(scamAnalysisTable)
+        .set({ family_notified: true })
+        .where(eq(scamAnalysisTable.id, scam_analysis_id));
+    }
+
+    res.json({ success: true, sent, total: relationships.length, message: `Alert sent to ${sent} family member${sent !== 1 ? "s" : ""}.` });
+  } catch (err) {
+    req.log.error({ err }, "Scam alert-family error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

@@ -217,3 +217,112 @@ export async function sendPasswordResetEmail(email: string, token: string, first
 
   return data;
 }
+
+export async function sendScamAlertEmail(
+  recipientEmail: string,
+  recipientName: string | null,
+  senderName: string,
+  riskScore: number,
+  riskLevel: string,
+  scamCategory: string,
+  recommendation: string,
+) {
+  const name = recipientName || "there";
+  const riskLabel = riskLevel.replace("_", " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+  const riskColor = riskLevel === "critical_risk" ? "#DC2626" : riskLevel === "high_risk" ? "#EA580C" : "#F59E0B";
+
+  const { data, error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: [recipientEmail],
+    subject: `${APP_NAME} Alert: ${senderName} detected a ${riskLabel} scam`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scam Alert – ${APP_NAME}</title>
+</head>
+<body style="margin:0;padding:0;background:#F1F5F9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F1F5F9;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#DC2626,#EF4444);padding:36px 40px;text-align:center;">
+              <div style="display:inline-block;background:rgba(255,255,255,0.2);border-radius:50%;width:64px;height:64px;line-height:64px;font-size:32px;margin-bottom:12px;">&#x1F6A8;</div>
+              <h1 style="color:#FFFFFF;margin:8px 0 0 0;font-size:26px;font-weight:700;">${APP_NAME} Scam Alert</h1>
+              <p style="color:rgba(255,255,255,0.9);margin:6px 0 0 0;font-size:14px;">Family Protection Notification</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="color:#1E293B;font-size:22px;margin:0 0 12px 0;">Hi ${name},</h2>
+              <p style="color:#475569;font-size:16px;line-height:26px;margin:0 0 20px 0;">
+                <strong>${senderName}</strong> used ${APP_NAME} to analyze a suspicious message and it was flagged as potentially dangerous. They wanted you to be aware.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border-radius:12px;padding:20px;margin:0 0 24px 0;">
+                <tr>
+                  <td>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;">
+                          <span style="color:#64748B;font-size:13px;">Risk Level</span><br/>
+                          <span style="color:${riskColor};font-size:18px;font-weight:700;">${riskLabel}</span>
+                        </td>
+                        <td style="padding:8px 0;text-align:right;">
+                          <span style="color:#64748B;font-size:13px;">Risk Score</span><br/>
+                          <span style="color:${riskColor};font-size:28px;font-weight:700;">${riskScore}</span><span style="color:#94A3B8;font-size:16px;">/100</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2" style="padding:12px 0 4px 0;border-top:1px solid #FECACA;">
+                          <span style="color:#64748B;font-size:13px;">Category</span><br/>
+                          <span style="color:#1E293B;font-size:15px;font-weight:600;">${scamCategory}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="2" style="padding:8px 0 0 0;">
+                          <span style="color:#64748B;font-size:13px;">Recommendation</span><br/>
+                          <span style="color:#DC2626;font-size:15px;font-weight:600;">${recommendation}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#475569;font-size:15px;line-height:24px;margin:0 0 8px 0;">
+                <strong>What you can do:</strong>
+              </p>
+              <ul style="color:#475569;font-size:15px;line-height:28px;margin:0 0 20px 0;padding-left:20px;">
+                <li>Check in with ${senderName} to make sure they didn't respond or share personal information</li>
+                <li>Help them block the sender or delete the message</li>
+                <li>Remind them to never share passwords, bank details, or Social Security numbers</li>
+              </ul>
+              <p style="color:#94A3B8;font-size:13px;text-align:center;margin:0;">
+                This alert was sent because you are listed as a trusted family member in ${senderName}'s ${APP_NAME} account.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#F8FAFC;padding:20px 40px;text-align:center;">
+              <p style="color:#94A3B8;font-size:12px;margin:0;">
+                &copy; 2026 ${APP_NAME} &middot; Protecting seniors from scams and tech confusion
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  });
+
+  if (error) {
+    throw new Error(`Scam alert email failed: ${error.message}`);
+  }
+
+  return data;
+}

@@ -23,7 +23,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import PageHeader from "@/components/PageHeader";
-import { scamApi, ApiError } from "@/services/api";
+import { scamApi, familyApi, ApiError } from "@/services/api";
 
 interface AttachedFile {
   uri: string;
@@ -127,6 +127,9 @@ export default function ScamScreen() {
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [expandedLayers, setExpandedLayers] = useState<Record<number, boolean>>({});
+  const [alertSending, setAlertSending] = useState(false);
+  const [alertSent, setAlertSent] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const [attachment, setAttachment] = useState<AttachedFile | null>(null);
 
   function showAttachOptions() {
@@ -249,6 +252,8 @@ export default function ScamScreen() {
     setResult(null);
     setFeedbackSent(false);
     setExpandedLayers({});
+    setAlertSent(false);
+    setAlertMessage("");
 
     try {
       let data;
@@ -307,6 +312,22 @@ export default function ScamScreen() {
       setFeedbackSent(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {}
+  }
+
+  async function alertFamily() {
+    if (!result || alertSending || alertSent) return;
+    setAlertSending(true);
+    try {
+      const data = await scamApi.alertFamily(result.id, user?.token);
+      setAlertSent(true);
+      setAlertMessage(data.message || "Alert sent to your family.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      const msg = err?.data?.message || "Could not send alert. Make sure you have family members added in the Family tab.";
+      Alert.alert("Alert Failed", msg);
+    } finally {
+      setAlertSending(false);
+    }
   }
 
   function toggleLayer(idx: number) {
@@ -541,6 +562,32 @@ export default function ScamScreen() {
               </>
             )}
 
+            {result.risk_level !== "safe" && result.risk_level !== "low_risk" && (
+              <View style={styles.alertFamilySection}>
+                {alertSent ? (
+                  <View style={styles.alertSentBanner}>
+                    <Ionicons name="checkmark-circle" size={20} color="#059669" />
+                    <Text style={[styles.alertSentText, { fontSize: ts.sm }]}>{alertMessage}</Text>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [styles.alertFamilyBtn, pressed && styles.pressed, alertSending && styles.disabled]}
+                    onPress={alertFamily}
+                    disabled={alertSending}
+                  >
+                    {alertSending ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="people" size={20} color="#FFFFFF" />
+                        <Text style={[styles.alertFamilyBtnText, { fontSize: ts.sm }]}>Alert Family Members</Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
+              </View>
+            )}
+
             {!feedbackSent ? (
               <View style={styles.feedbackSection}>
                 <Text style={[styles.feedbackTitle, { color: theme.textSecondary, fontSize: ts.sm }]}>Was this accurate?</Text>
@@ -569,7 +616,7 @@ export default function ScamScreen() {
             )}
 
             <Pressable
-              onPress={() => { setResult(null); setText(""); setExpandedLayers({}); }}
+              onPress={() => { setResult(null); setText(""); setExpandedLayers({}); setAlertSent(false); setAlertMessage(""); }}
               style={[styles.analyzeAnotherBtn, { borderColor: theme.border }]}
             >
               <Text style={[styles.analyzeAnotherText, { color: theme.textSecondary, fontSize: ts.sm }]}>Check another message</Text>
@@ -779,6 +826,26 @@ const styles = StyleSheet.create({
   entityRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   entityLabel: { fontFamily: "Inter_600SemiBold", width: 55 },
   entityValue: { fontFamily: "Inter_400Regular", flex: 1 },
+  alertFamilySection: { marginTop: 20 },
+  alertFamilyBtn: {
+    backgroundColor: "#DC2626",
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  alertFamilyBtnText: { fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  alertSentBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#D1FAE5",
+    borderRadius: 12,
+    padding: 14,
+  },
+  alertSentText: { fontFamily: "Inter_600SemiBold", color: "#059669", flex: 1 },
   feedbackSection: { marginTop: 20, gap: 10 },
   feedbackTitle: { fontFamily: "Inter_500Medium" },
   feedbackButtons: { flexDirection: "row", gap: 10 },

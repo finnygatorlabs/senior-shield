@@ -192,6 +192,10 @@ export const scamApi = {
   report(text: string, scamType: string, token?: string) {
     return request("/scam/report", { method: "POST", body: { text, scam_type: scamType }, token });
   },
+
+  alertFamily(scamAnalysisId: string, token?: string) {
+    return request("/scam/alert-family", { method: "POST", body: { scam_analysis_id: scamAnalysisId }, token });
+  },
 };
 
 

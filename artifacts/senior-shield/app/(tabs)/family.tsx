@@ -31,6 +31,7 @@ interface FamilyMember {
 }
 
 const RELATIONSHIPS = ["Son", "Daughter", "Grandson", "Granddaughter", "Spouse", "Friend", "Caregiver"];
+const MAX_FAMILY_MEMBERS = 3;
 
 export default function FamilyScreen() {
   const { theme } = useTheme();
@@ -59,9 +60,15 @@ export default function FamilyScreen() {
     fetchMembers();
   }, []);
 
+  const atLimit = members.length >= MAX_FAMILY_MEMBERS;
+
   async function addMember() {
     if (!email.trim()) {
       Alert.alert("Missing email", "Please enter your family member's email address.");
+      return;
+    }
+    if (atLimit) {
+      Alert.alert("Limit Reached", `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`);
       return;
     }
     setAdding(true);
@@ -73,8 +80,9 @@ export default function FamilyScreen() {
         setEmail("");
         fetchMembers();
       }
-    } catch (err) {
-      Alert.alert("Error", "Could not add family member. Please try again.");
+    } catch (err: any) {
+      const msg = err?.data?.message || "Could not add family member. Please try again.";
+      Alert.alert("Error", msg);
     } finally {
       setAdding(false);
     }
@@ -107,13 +115,24 @@ export default function FamilyScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          onPress={() => setShowAddModal(true)}
-          style={[styles.addButton, { alignSelf: "flex-end", marginBottom: 16 }]}
-        >
-          <Ionicons name="add" size={22} color="#FFFFFF" />
-          <Text style={{ color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Add Member</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <Text style={{ color: theme.textSecondary, fontFamily: "Inter_500Medium", fontSize: 13 }}>
+            {members.length} of {MAX_FAMILY_MEMBERS} members
+          </Text>
+          <Pressable
+            onPress={() => {
+              if (atLimit) {
+                Alert.alert("Limit Reached", `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`);
+              } else {
+                setShowAddModal(true);
+              }
+            }}
+            style={[styles.addButton, atLimit && { opacity: 0.5 }]}
+          >
+            <Ionicons name="add" size={22} color="#FFFFFF" />
+            <Text style={{ color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Add Member</Text>
+          </Pressable>
+        </View>
 
         <View style={[styles.infoCard, { backgroundColor: "#EDE9FE", borderColor: "#C4B5FD" }]}>
           <Ionicons name="shield-checkmark" size={24} color="#7C3AED" />

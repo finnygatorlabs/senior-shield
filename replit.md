@@ -29,7 +29,8 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 - Built with Express 5, PostgreSQL, and Drizzle ORM.
 - Employs Zod for validation of API requests and responses.
 - API codegen is handled by Orval from an OpenAPI specification, generating React Query hooks and Zod schemas.
-- Features comprehensive API endpoints for authentication, user management, voice assistance (AI queries, TTS), scam detection, family management, contact management, billing (Stripe integration), emergency services, hearing aid connectivity, administration, analytics, telecom, insurance, and facility management.
+- Features comprehensive API endpoints for authentication, user management, voice assistance (AI queries, TTS), scam detection, family management (max 3 members per user), contact management, billing (Stripe integration), emergency services, hearing aid connectivity, administration, analytics, telecom, insurance, and facility management.
+- **Family Scam Alerts**: When a scam scan returns medium risk or above, users can tap "Alert Family Members" to send a branded email alert to all family members with scam_alerts enabled. The email includes risk score, risk level, scam category, and safety recommendations. The `scam_analysis` record is marked `family_notified: true` only when at least one email is successfully sent.
 - **Scam Detection Engine** (`src/lib/scamFramework.ts` + `src/lib/scamAnalyzer.ts`): Rebuilt with an exhaustive 76-category framework covering 12 sectors (government, financial, healthcare, technology, retail, relationship, insurance, real estate, employment, education, utility, miscellaneous). Features 500+ keywords with word-boundary matching for short tokens, 200+ red flags, category-specific minimum trigger scores (40–75 pts), and 15 senior vulnerability multipliers (1.2x–1.5x) targeting authority exploitation, emotional manipulation, urgency pressure, isolation tactics, tech unfamiliarity, etc. The 5-layer analysis pipeline: (1) Industry Category Detection (max 40pts, per-cat cap 30), (2) Cross-Cutting Pattern Analysis (max 30pts), (3) Link Analysis with typosquatting detection (max 20pts), (4) Sender Analysis (max 15pts), (5) Senior Vulnerability Analysis with score multipliers (max 15pts). Enhanced court/legal scam detection with QR code payment keywords, expanded cross-cutting threat/financial patterns, and improved Authority Exploitation vulnerability triggers for government impersonation. API response includes `matched_categories` and `vulnerability_factors` fields.
 - Voice AI system prompt dynamically fetches the user's active daily reminders and injects them into the conversation context. Reminder labels are sanitized before prompt injection to prevent prompt injection attacks.
 - Middleware includes rate limiting, standardized error handling, and 404 management.
@@ -52,6 +53,7 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 ## External Dependencies
 
 - **OpenAI**: Used for GPT-4o-mini in voice assistance and text-to-speech (with Edge TTS as fallback).
+- **Resend**: Transactional email service for verification, welcome, password reset, and scam alert emails to family members.
 - **Stripe**: Full subscription billing with checkout, webhook signature verification, invoice retrieval, and cancellation via the official Stripe SDK.
 - **PostgreSQL**: Relational database.
 - **Expo**: Framework for React Native application development.
