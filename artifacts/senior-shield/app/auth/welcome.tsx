@@ -93,7 +93,7 @@ export default function WelcomeScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 28 }]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 28 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.logoSection}>
@@ -110,7 +110,7 @@ export default function WelcomeScreen() {
             resizeMode="contain"
           />
           <Text style={styles.appName}>SeniorShield{"\u2122"}</Text>
-          <Text style={styles.tagline}>Your voice assistant for tech help{"\n"}& scam protection</Text>
+          <Text style={styles.tagline}>Your voice assistant for tech help & scam protection</Text>
         </View>
 
         <View style={styles.features}>
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
   },
   verifiedSection: {
     alignItems: "center",
-    marginVertical: 4,
-    gap: 6,
+    marginVertical: 2,
+    gap: 3,
   },
   verifiedDivider: {
     width: "60%",
@@ -259,26 +259,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 10,
+    marginTop: 6,
   },
   verifiedLabel: {
     fontFamily: "Inter_700Bold",
-    fontSize: 12,
+    fontSize: 11,
     color: "#34D399",
     letterSpacing: 1.2,
   },
   verifiedStat: {
     fontFamily: "Inter_700Bold",
-    fontSize: 22,
+    fontSize: 19,
     color: "#FFFFFF",
-    marginTop: 2,
+    marginTop: 1,
   },
   verifiedDesc: {
     fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: "rgba(255,255,255,0.6)",
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 16,
   },
   buttons: {
     flexDirection: "row",
