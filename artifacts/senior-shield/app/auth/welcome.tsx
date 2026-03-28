@@ -7,6 +7,7 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -52,10 +53,12 @@ function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top
 }
 
 const FEATURES = [
-  { icon: "mic" as const, text: "Voice-Guided Tech Help", desc: "Plain-language answers to any question" },
-  { icon: "shield-checkmark" as const, text: "Real-Time Scam Detection", desc: "Instant risk analysis on any message" },
-  { icon: "people" as const, text: "Family Alert System", desc: "Loved ones get notified of threats" },
+  { icon: "mic" as const, text: "Voice-guided tech help", desc: "Ask anything, get plain-language answers" },
+  { icon: "shield-checkmark" as const, text: "Real-time scam detection", desc: "Paste any message for instant risk analysis" },
+  { icon: "people" as const, text: "Family alert system", desc: "Loved ones get notified of threats" },
   { icon: "warning" as const, text: "Emergency SOS", desc: "One-tap 911 and family alerts" },
+  { icon: "ear" as const, text: "Hearing aid support", desc: "Connect and manage hearing devices" },
+  { icon: "card" as const, text: "Secure billing", desc: "Simple subscription with Stripe" },
 ];
 
 export default function WelcomeScreen() {
@@ -82,8 +85,25 @@ export default function WelcomeScreen() {
       <DecoLine width={140} top={200} left={20} rotate="-12deg" opacity={0.05} />
       <DecoLine width={200} top={480} left={width - 140} rotate="-25deg" opacity={0.04} />
 
-      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
+      <View style={{ position: "absolute", top: 65, right: 20, flexDirection: "row", gap: 4 }}>
+        {[0, 1, 2, 3, 4].map(i => (
+          <View key={i} style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" }} />
+        ))}
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 28 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.logoSection}>
+          <View style={styles.badgeRow}>
+            <View style={styles.protectedBadge}>
+              <Ionicons name="shield-checkmark" size={11} color="#34D399" />
+              <Text style={styles.protectedText}>Protected</Text>
+            </View>
+          </View>
+
           <Image
             source={require("../../assets/images/logo-shield.png")}
             style={styles.logo}
@@ -97,7 +117,7 @@ export default function WelcomeScreen() {
           {FEATURES.map((item, i) => (
             <View key={i} style={styles.featureRow}>
               <View style={styles.featureIcon}>
-                <Ionicons name={item.icon} size={19} color="#FFFFFF" />
+                <Ionicons name={item.icon} size={20} color="#FFFFFF" />
               </View>
               <View style={styles.featureTextCol}>
                 <Text style={styles.featureTitle}>{item.text}</Text>
@@ -109,16 +129,17 @@ export default function WelcomeScreen() {
 
         <View style={styles.verifiedSection}>
           <View style={styles.verifiedDivider} />
-          <View style={styles.verifiedInner}>
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={15} color="#34D399" />
-              <Text style={styles.verifiedLabel}>VERIFIED ACCURACY</Text>
-            </View>
-            <Text style={styles.verifiedStat}>95% Scam Detection Rate</Text>
-            <Text style={styles.verifiedDesc}>
-              82 scam categories tested across 25+ industries
-            </Text>
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={16} color="#34D399" />
+            <Text style={styles.verifiedLabel}>VERIFIED ACCURACY</Text>
           </View>
+          <Text style={styles.verifiedStat}>95% Scam Detection Rate</Text>
+          <Text style={styles.verifiedDesc}>
+            Tested on 82 scam categories across 25+ industries
+          </Text>
+          <Text style={styles.verifiedDesc}>
+            Real-world tested on actual scams targeting seniors
+          </Text>
           <View style={styles.verifiedDivider} />
         </View>
 
@@ -137,7 +158,7 @@ export default function WelcomeScreen() {
             <Text style={styles.secondaryButtonText}>I already have an account</Text>
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -145,35 +166,55 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
-    flex: 1,
     paddingHorizontal: 28,
     justifyContent: "space-between",
+    flexGrow: 1,
   },
   logoSection: {
     alignItems: "center",
     marginTop: 8,
   },
+  badgeRow: {
+    marginBottom: 12,
+  },
+  protectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(16,185,129,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(16,185,129,0.4)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  protectedText: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+    fontSize: 11,
+  },
   logo: {
-    width: 72,
-    height: 72,
-    marginBottom: 14,
+    width: 80,
+    height: 80,
+    marginBottom: 16,
   },
   appName: {
-    fontSize: 34,
+    fontSize: 36,
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
     letterSpacing: -0.5,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   tagline: {
     fontSize: 16,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    lineHeight: 23,
+    lineHeight: 24,
   },
   features: {
-    gap: 12,
+    gap: 14,
+    marginVertical: 24,
   },
   featureRow: {
     flexDirection: "row",
@@ -181,9 +222,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
@@ -201,53 +242,52 @@ const styles = StyleSheet.create({
   featureDesc: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(255,255,255,0.6)",
     marginTop: 1,
   },
   verifiedSection: {
     alignItems: "center",
-    gap: 0,
+    marginVertical: 4,
+    gap: 6,
   },
   verifiedDivider: {
-    width: "55%",
+    width: "60%",
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  verifiedInner: {
-    alignItems: "center",
-    paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   verifiedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
+    marginTop: 10,
   },
   verifiedLabel: {
     fontFamily: "Inter_700Bold",
-    fontSize: 11,
+    fontSize: 12,
     color: "#34D399",
     letterSpacing: 1.2,
   },
   verifiedStat: {
     fontFamily: "Inter_700Bold",
-    fontSize: 20,
+    fontSize: 22,
     color: "#FFFFFF",
-    marginTop: 3,
+    marginTop: 2,
   },
   verifiedDesc: {
     fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.55)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
     textAlign: "center",
-    marginTop: 2,
+    lineHeight: 18,
   },
   buttons: {
-    gap: 10,
+    gap: 12,
+    marginTop: 8,
   },
   primaryButton: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: "center",
   },
   primaryButtonText: {
@@ -258,7 +298,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
