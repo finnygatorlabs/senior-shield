@@ -5,6 +5,9 @@ import {
   KNOWN_COMPANIES,
   SUSPICIOUS_TLDS,
   URL_SHORTENERS,
+  LEGITIMATE_SENDERS,
+  LEGITIMATE_PATTERNS,
+  SCAM_COMPOUND_PATTERNS,
   type ScamCategory,
   type VulnerabilityFactor,
 } from "./scamFramework.js";
@@ -265,6 +268,17 @@ function layer2_crossCuttingPatterns(text: string): LayerResult & { patternNames
     patternNames.push("pressured_info_request");
   }
 
+  for (const cp of SCAM_COMPOUND_PATTERNS) {
+    const allGroupsMatch = cp.requiredGroups.every(group =>
+      group.some(kw => matchKeyword(lower, kw))
+    );
+    if (allGroupsMatch) {
+      score += cp.riskBonus;
+      findings.push(`Compound pattern: ${cp.name} — ${cp.description}`);
+      patternNames.push(`compound_${cp.name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`);
+    }
+  }
+
   return { name: "Cross-Cutting Pattern Analysis", score: Math.min(score, 30), maxScore: 30, findings, patternNames };
 }
 
@@ -445,6 +459,66 @@ function layer5_seniorVulnerability(
   };
 }
 
+function checkLegitimateMessage(text: string, entities: ExtractedEntities): { reduction: number; findings: string[] } {
+  const lower = text.toLowerCase();
+  let reduction = 0;
+  const findings: string[] = [];
+
+  const allLegitSenders = Object.values(LEGITIMATE_SENDERS).flat();
+  const mentionedSender = allLegitSenders.find(s => lower.includes(s));
+
+  const hasUrgentFinancialRequest = CROSS_CUTTING_KEYWORDS.urgency.some(k => lower.includes(k)) &&
+    CROSS_CUTTING_KEYWORDS.financial.some(k => lower.includes(k));
+  const hasPersonalInfoRequest = CROSS_CUTTING_KEYWORDS.personalInfoRequest.some(k => lower.includes(k));
+  const hasThreats = CROSS_CUTTING_KEYWORDS.threats.some(k => lower.includes(k));
+  const hasGiftCard = CROSS_CUTTING_KEYWORDS.giftCardPayment.some(k => lower.includes(k));
+  const hasImpersonation = CROSS_CUTTING_KEYWORDS.impersonation.some(k => lower.includes(k));
+  const hasSecrecy = CROSS_CUTTING_KEYWORDS.secrecy.some(k => lower.includes(k));
+
+  const hasAnyHighRiskIndicator = hasUrgentFinancialRequest || hasPersonalInfoRequest || hasThreats || hasGiftCard || hasImpersonation || hasSecrecy;
+
+  if (mentionedSender && !hasAnyHighRiskIndicator) {
+    reduction += 25;
+    findings.push(`Message from recognized sender "${mentionedSender}" with no suspicious requests`);
+  }
+
+  if (entities.senderDomain) {
+    const isOfficialDomain = KNOWN_COMPANIES.some(c =>
+      c.domains.some(d => entities.senderDomain === d || entities.senderDomain!.endsWith("." + d))
+    );
+    if (isOfficialDomain && !hasAnyHighRiskIndicator) {
+      reduction += 30;
+      findings.push(`Official sender domain "${entities.senderDomain}" verified`);
+    }
+  }
+
+  for (const pattern of LEGITIMATE_PATTERNS) {
+    const matchCount = pattern.keywords.filter(kw => lower.includes(kw)).length;
+    if (matchCount >= 1 && !hasAnyHighRiskIndicator) {
+      reduction += pattern.scoreReduction;
+      findings.push(`${pattern.name}: ${pattern.description}`);
+    }
+  }
+
+  return { reduction: Math.min(reduction, 50), findings };
+}
+
+function getCompoundMultiplier(text: string): number {
+  const lower = text.toLowerCase();
+  let maxMultiplier = 1.0;
+
+  for (const cp of SCAM_COMPOUND_PATTERNS) {
+    const allGroupsMatch = cp.requiredGroups.every(group =>
+      group.some(kw => matchKeyword(lower, kw))
+    );
+    if (allGroupsMatch && cp.multiplier > maxMultiplier) {
+      maxMultiplier = cp.multiplier;
+    }
+  }
+
+  return maxMultiplier;
+}
+
 export function analyzeScamText(text: string): FullAnalysis {
   const entities = extractEntities(text);
 
@@ -454,12 +528,19 @@ export function analyzeScamText(text: string): FullAnalysis {
   const l4 = layer4_sender(entities, text);
   const l5 = layer5_seniorVulnerability(text, l1.matchedCategories, l1.score, l2.score);
 
+  const compoundMultiplier = getCompoundMultiplier(text);
+  const legitResult = checkLegitimateMessage(text, entities);
+
   const baseScore = l1.score + l2.score + l3.score + l4.score + l5.score;
 
+  const effectiveMultiplier = Math.max(l5.multiplier, compoundMultiplier);
+
   let adjustedScore = baseScore;
-  if (l5.multiplier > 1.0 && baseScore >= 20) {
-    adjustedScore = Math.round(baseScore * l5.multiplier);
+  if (effectiveMultiplier > 1.0 && baseScore >= 20) {
+    adjustedScore = Math.round(baseScore * effectiveMultiplier);
   }
+
+  adjustedScore = Math.max(0, adjustedScore - legitResult.reduction);
 
   const riskScore = Math.min(adjustedScore, 100);
 
@@ -470,7 +551,7 @@ export function analyzeScamText(text: string): FullAnalysis {
   else if (riskScore <= 80) risk_level = "high_risk";
   else risk_level = "critical_risk";
 
-  const totalFindings = l1.findings.length + l2.findings.length + l3.findings.length + l4.findings.length + l5.findings.length;
+  const totalFindings = l1.findings.length + l2.findings.length + l3.findings.length + l4.findings.length + l5.findings.length + legitResult.findings.length;
   const confidence = Math.min(
     0.5 +
     (riskScore / 200) +
@@ -488,6 +569,7 @@ export function analyzeScamText(text: string): FullAnalysis {
     ...(l3.findings.length > 0 ? ["suspicious_links"] : []),
     ...(l4.findings.length > 0 ? ["sender_spoofing"] : []),
     ...(l5.vulnerabilityMatches.length > 0 ? ["senior_vulnerability_targeted"] : []),
+    ...(legitResult.reduction > 0 ? ["legitimate_message_indicators"] : []),
   ])];
 
   const matched_categories = l1.matchedCategories.map(m => m.category.name);
@@ -499,6 +581,12 @@ export function analyzeScamText(text: string): FullAnalysis {
     { name: l3.name, score: l3.score, maxScore: l3.maxScore, findings: l3.findings },
     { name: l4.name, score: l4.score, maxScore: l4.maxScore, findings: l4.findings },
     { name: l5.name, score: l5.score, maxScore: l5.maxScore, findings: l5.findings },
+    ...(legitResult.reduction > 0 ? [{
+      name: "Legitimate Message Analysis",
+      score: -legitResult.reduction,
+      maxScore: 0,
+      findings: legitResult.findings,
+    }] : []),
   ];
 
   const topCategory = l1.matchedCategories[0];
