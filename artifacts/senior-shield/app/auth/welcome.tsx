@@ -53,12 +53,12 @@ function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top
 }
 
 const FEATURES = [
-  { icon: "mic" as const, text: "Voice-guided tech help", desc: "Ask anything, get plain-language answers" },
-  { icon: "shield-checkmark" as const, text: "Real-time scam detection", desc: "Paste any message for instant risk analysis" },
-  { icon: "people" as const, text: "Family alert system", desc: "Loved ones get notified of threats" },
-  { icon: "warning" as const, text: "Emergency SOS", desc: "One-tap 911 and family alerts" },
-  { icon: "ear" as const, text: "Hearing aid support", desc: "Connect and manage hearing devices" },
-  { icon: "card" as const, text: "Secure billing", desc: "Simple subscription with Stripe" },
+  { icon: "mic" as const, text: "Voice-guided tech help" },
+  { icon: "shield-checkmark" as const, text: "Real-time scam detection" },
+  { icon: "people" as const, text: "Family alert system" },
+  { icon: "warning" as const, text: "Emergency SOS" },
+  { icon: "ear" as const, text: "Hearing aid support" },
+  { icon: "card" as const, text: "Secure billing" },
 ];
 
 export default function WelcomeScreen() {
@@ -117,12 +117,9 @@ export default function WelcomeScreen() {
           {FEATURES.map((item, i) => (
             <View key={i} style={styles.featureRow}>
               <View style={styles.featureIcon}>
-                <Ionicons name={item.icon} size={20} color="#FFFFFF" />
+                <Ionicons name={item.icon} size={17} color="#FFFFFF" />
               </View>
-              <View style={styles.featureTextCol}>
-                <Text style={styles.featureTitle}>{item.text}</Text>
-                <Text style={styles.featureDesc}>{item.desc}</Text>
-              </View>
+              <Text style={styles.featureTitle}>{item.text}</Text>
             </View>
           ))}
         </View>
@@ -130,15 +127,12 @@ export default function WelcomeScreen() {
         <View style={styles.verifiedSection}>
           <View style={styles.verifiedDivider} />
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={16} color="#34D399" />
+            <Ionicons name="checkmark-circle" size={14} color="#34D399" />
             <Text style={styles.verifiedLabel}>VERIFIED ACCURACY</Text>
           </View>
           <Text style={styles.verifiedStat}>95% Scam Detection Rate</Text>
           <Text style={styles.verifiedDesc}>
-            Tested on 82 scam categories across 25+ industries
-          </Text>
-          <Text style={styles.verifiedDesc}>
-            Real-world tested on actual scams targeting seniors
+            Tested on 82 scam categories across 25+ industries{"\n"}Real-world tested on actual scams targeting seniors
           </Text>
           <View style={styles.verifiedDivider} />
         </View>
@@ -172,7 +166,7 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
   badgeRow: {
     marginBottom: 12,
@@ -194,61 +188,53 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
+    width: 64,
+    height: 64,
+    marginBottom: 12,
   },
   appName: {
-    fontSize: 36,
+    fontSize: 32,
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
     letterSpacing: -0.5,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 22,
   },
   features: {
-    gap: 14,
-    marginVertical: 24,
+    gap: 10,
+    marginVertical: 16,
   },
   featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
   },
   featureIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
-  featureTextCol: {
-    flex: 1,
-  },
   featureTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
-  },
-  featureDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.6)",
-    marginTop: 1,
+    flex: 1,
   },
   verifiedSection: {
     alignItems: "center",
-    marginVertical: 4,
-    gap: 6,
+    marginVertical: 2,
+    gap: 4,
   },
   verifiedDivider: {
     width: "60%",
@@ -258,53 +244,53 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 10,
+    gap: 5,
+    marginTop: 6,
   },
   verifiedLabel: {
     fontFamily: "Inter_700Bold",
-    fontSize: 12,
+    fontSize: 11,
     color: "#34D399",
     letterSpacing: 1.2,
   },
   verifiedStat: {
     fontFamily: "Inter_700Bold",
-    fontSize: 22,
+    fontSize: 19,
     color: "#FFFFFF",
-    marginTop: 2,
+    marginTop: 1,
   },
   verifiedDesc: {
     fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: "rgba(255,255,255,0.6)",
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 17,
   },
   buttons: {
-    gap: 12,
-    marginTop: 8,
+    gap: 10,
+    marginTop: 6,
   },
   primaryButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    paddingVertical: 18,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
   },
   primaryButtonText: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: "#0E2D6B",
   },
   secondaryButton: {
     backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 16,
-    paddingVertical: 18,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
   secondaryButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_500Medium",
     color: "#FFFFFF",
   },
