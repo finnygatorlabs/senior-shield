@@ -11,8 +11,16 @@ async function extractPdfText(filePath: string): Promise<string> {
   const mod = await import("pdf-parse");
   const pdfParse = (mod as any).default || mod;
   const buffer = await fs.readFile(filePath);
-  const data = await pdfParse(buffer);
-  return data.text || "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const data = await pdfParse(buffer);
+      return data.text || "";
+    } catch (err) {
+      if (attempt === 0) continue;
+      return "";
+    }
+  }
+  return "";
 }
 
 async function extractDocxText(filePath: string): Promise<string> {
