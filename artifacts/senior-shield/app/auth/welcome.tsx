@@ -206,11 +206,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 20,
   },
   features: {
     gap: 14,
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
   },
   verifiedSection: {
     alignItems: "center",
-    marginVertical: 2,
-    gap: 3,
+    marginVertical: 4,
+    gap: 6,
   },
   verifiedDivider: {
     width: "60%",
@@ -259,26 +259,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 6,
+    marginTop: 10,
   },
   verifiedLabel: {
     fontFamily: "Inter_700Bold",
-    fontSize: 11,
+    fontSize: 12,
     color: "#34D399",
     letterSpacing: 1.2,
   },
   verifiedStat: {
     fontFamily: "Inter_700Bold",
-    fontSize: 19,
+    fontSize: 22,
     color: "#FFFFFF",
-    marginTop: 1,
+    marginTop: 2,
   },
   verifiedDesc: {
     fontFamily: "Inter_400Regular",
-    fontSize: 12,
+    fontSize: 13,
     color: "rgba(255,255,255,0.6)",
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 18,
   },
   buttons: {
     flexDirection: "row",
