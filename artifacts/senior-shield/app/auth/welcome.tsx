@@ -7,7 +7,6 @@ import {
   StatusBar,
   Dimensions,
   Image,
-  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -53,12 +52,10 @@ function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top
 }
 
 const FEATURES = [
-  { icon: "mic" as const, text: "Voice-guided tech help" },
-  { icon: "shield-checkmark" as const, text: "Real-time scam detection" },
-  { icon: "people" as const, text: "Family alert system" },
-  { icon: "warning" as const, text: "Emergency SOS" },
-  { icon: "ear" as const, text: "Hearing aid support" },
-  { icon: "card" as const, text: "Secure billing" },
+  { icon: "mic" as const, text: "Voice-Guided Tech Help", desc: "Plain-language answers to any question" },
+  { icon: "shield-checkmark" as const, text: "Real-Time Scam Detection", desc: "Instant risk analysis on any message" },
+  { icon: "people" as const, text: "Family Alert System", desc: "Loved ones get notified of threats" },
+  { icon: "warning" as const, text: "Emergency SOS", desc: "One-tap 911 and family alerts" },
 ];
 
 export default function WelcomeScreen() {
@@ -85,25 +82,8 @@ export default function WelcomeScreen() {
       <DecoLine width={140} top={200} left={20} rotate="-12deg" opacity={0.05} />
       <DecoLine width={200} top={480} left={width - 140} rotate="-25deg" opacity={0.04} />
 
-      <View style={{ position: "absolute", top: 65, right: 20, flexDirection: "row", gap: 4 }}>
-        {[0, 1, 2, 3, 4].map(i => (
-          <View key={i} style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" }} />
-        ))}
-      </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 28 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.logoSection}>
-          <View style={styles.badgeRow}>
-            <View style={styles.protectedBadge}>
-              <Ionicons name="shield-checkmark" size={11} color="#34D399" />
-              <Text style={styles.protectedText}>Protected</Text>
-            </View>
-          </View>
-
           <Image
             source={require("../../assets/images/logo-shield.png")}
             style={styles.logo}
@@ -117,23 +97,28 @@ export default function WelcomeScreen() {
           {FEATURES.map((item, i) => (
             <View key={i} style={styles.featureRow}>
               <View style={styles.featureIcon}>
-                <Ionicons name={item.icon} size={17} color="#FFFFFF" />
+                <Ionicons name={item.icon} size={19} color="#FFFFFF" />
               </View>
-              <Text style={styles.featureTitle}>{item.text}</Text>
+              <View style={styles.featureTextCol}>
+                <Text style={styles.featureTitle}>{item.text}</Text>
+                <Text style={styles.featureDesc}>{item.desc}</Text>
+              </View>
             </View>
           ))}
         </View>
 
         <View style={styles.verifiedSection}>
           <View style={styles.verifiedDivider} />
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={14} color="#34D399" />
-            <Text style={styles.verifiedLabel}>VERIFIED ACCURACY</Text>
+          <View style={styles.verifiedInner}>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={15} color="#34D399" />
+              <Text style={styles.verifiedLabel}>VERIFIED ACCURACY</Text>
+            </View>
+            <Text style={styles.verifiedStat}>95% Scam Detection Rate</Text>
+            <Text style={styles.verifiedDesc}>
+              82 scam categories tested across 25+ industries
+            </Text>
           </View>
-          <Text style={styles.verifiedStat}>95% Scam Detection Rate</Text>
-          <Text style={styles.verifiedDesc}>
-            Tested on 82 scam categories across 25+ industries{"\n"}Real-world tested on actual scams targeting seniors
-          </Text>
           <View style={styles.verifiedDivider} />
         </View>
 
@@ -152,7 +137,7 @@ export default function WelcomeScreen() {
             <Text style={styles.secondaryButtonText}>I already have an account</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -160,92 +145,82 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
+    flex: 1,
     paddingHorizontal: 28,
     justifyContent: "space-between",
-    flexGrow: 1,
   },
   logoSection: {
     alignItems: "center",
-    marginTop: 4,
-  },
-  badgeRow: {
-    marginBottom: 12,
-  },
-  protectedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(16,185,129,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(16,185,129,0.4)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  protectedText: {
-    fontFamily: "Inter_600SemiBold",
-    color: "#FFFFFF",
-    fontSize: 11,
+    marginTop: 8,
   },
   logo: {
-    width: 64,
-    height: 64,
-    marginBottom: 12,
+    width: 72,
+    height: 72,
+    marginBottom: 14,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 34,
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
     letterSpacing: -0.5,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   tagline: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 23,
   },
   features: {
-    gap: 10,
-    marginVertical: 16,
+    gap: 12,
   },
   featureRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
   },
   featureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
+  featureTextCol: {
+    flex: 1,
+  },
   featureTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
-    flex: 1,
+  },
+  featureDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.55)",
+    marginTop: 1,
   },
   verifiedSection: {
     alignItems: "center",
-    marginVertical: 2,
-    gap: 4,
+    gap: 0,
   },
   verifiedDivider: {
-    width: "60%",
+    width: "55%",
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  verifiedInner: {
+    alignItems: "center",
+    paddingVertical: 10,
   },
   verifiedBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    marginTop: 6,
   },
   verifiedLabel: {
     fontFamily: "Inter_700Bold",
@@ -255,42 +230,41 @@ const styles = StyleSheet.create({
   },
   verifiedStat: {
     fontFamily: "Inter_700Bold",
-    fontSize: 19,
+    fontSize: 20,
     color: "#FFFFFF",
-    marginTop: 1,
+    marginTop: 3,
   },
   verifiedDesc: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.55)",
     textAlign: "center",
-    lineHeight: 17,
+    marginTop: 2,
   },
   buttons: {
     gap: 10,
-    marginTop: 6,
   },
   primaryButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: "center",
   },
   primaryButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "Inter_700Bold",
     color: "#0E2D6B",
   },
   secondaryButton: {
     backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
   secondaryButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_500Medium",
     color: "#FFFFFF",
   },
