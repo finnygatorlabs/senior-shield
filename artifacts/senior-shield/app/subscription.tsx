@@ -25,6 +25,7 @@ const GRADIENT: [string, string, string] = ['#06102E', '#0E2D6B', '#0B5FAA'];
 function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: number; left?: number; right?: number; opacity: number }) {
   return (
     <View
+      pointerEvents="none"
       style={{
         position: 'absolute',
         width: size,
@@ -43,6 +44,7 @@ function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: n
 function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top: number; left: number; rotate: string; opacity: number }) {
   return (
     <View
+      pointerEvents="none"
       style={{
         position: 'absolute',
         width: w,
@@ -127,7 +129,7 @@ export default function SubscriptionScreen() {
 
         if (response?.checkout_url) {
           if (Platform.OS === 'web') {
-            window.open(response.checkout_url, '_blank');
+            window.location.href = response.checkout_url;
           } else {
             await Linking.openURL(response.checkout_url);
           }
