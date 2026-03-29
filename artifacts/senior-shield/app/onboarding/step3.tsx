@@ -54,7 +54,7 @@ function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top
   );
 }
 
-const RELATIONSHIPS = ["Son", "Daughter", "Grandson", "Granddaughter", "Spouse", "Friend", "Caregiver"];
+const RELATIONSHIPS = ["Son", "Daughter", "Brother", "Sister", "Grandson", "Granddaughter", "Significant Other", "Spouse", "Friend", "Caregiver"];
 
 export default function OnboardingStep3() {
   const insets = useSafeAreaInsets();
