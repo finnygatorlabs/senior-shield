@@ -154,45 +154,39 @@ export default function LoginScreen() {
         loginWithGoogle(token)
           .catch((err) => showError(err?.message || "Google sign-in failed. Please try again."))
           .finally(() => setSocialLoading(false));
-      } else {
-        showError("Could not get access token from Google. Please try again.");
-      }
-    } else if (googleResponse.type === "error") {
-      showError("Google sign-in failed. Please try again.");
-    } else if (googleResponse.type === "dismiss") {
-      if (Platform.OS === "web") {
-        let attempts = 0;
-        const poll = setInterval(() => {
-          attempts++;
-          refreshUser();
-          if (attempts >= 10) clearInterval(poll);
-        }, 500);
       }
     }
   }, [googleResponse]);
 
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
+  function handleGoogleSignIn() {
+    setError("");
+    if (Platform.OS === "web") {
+      setSocialLoading(true);
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+      const redirectUri = `${window.location.origin}/auth/google-callback`;
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `response_type=token&` +
+        `scope=${encodeURIComponent("openid email profile")}&` +
+        `prompt=select_account`;
 
-    function handleMessage(event: MessageEvent) {
-      if (event.data?.type === "google-auth-success") {
-        refreshUser();
-      }
+      const popup = window.open(url, "google-auth", "width=500,height=600,menubar=no,toolbar=no");
+
+      const poll = setInterval(async () => {
+        if (!popup || popup.closed) {
+          clearInterval(poll);
+          await refreshUser();
+          setTimeout(async () => {
+            await refreshUser();
+            setSocialLoading(false);
+          }, 500);
+        }
+      }, 300);
+    } else {
+      googlePromptAsync();
     }
-
-    function handleStorage(event: StorageEvent) {
-      if (event.key === "seniorshield_google_auth_complete" && event.newValue) {
-        refreshUser();
-      }
-    }
-
-    window.addEventListener("message", handleMessage);
-    window.addEventListener("storage", handleStorage);
-    return () => {
-      window.removeEventListener("message", handleMessage);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
+  }
 
   function showError(msg: string) {
     setError(msg);
@@ -289,10 +283,7 @@ export default function LoginScreen() {
           <View style={styles.socialSection}>
             <Pressable
               style={[styles.socialButton, styles.googleBtn, socialLoading && styles.disabled]}
-              onPress={() => {
-                setError("");
-                googlePromptAsync();
-              }}
+              onPress={handleGoogleSignIn}
               disabled={socialLoading}
             >
               {socialLoading ? (
