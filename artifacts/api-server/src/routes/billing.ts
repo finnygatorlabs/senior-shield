@@ -191,8 +191,8 @@ router.post("/create-checkout", requireAuth, async (req: AuthRequest, res) => {
     }
 
     const priceIds: Record<string, string> = {
-      monthly: process.env.STRIPE_MONTHLY_PRICE_ID || "price_monthly",
-      annual: process.env.STRIPE_ANNUAL_PRICE_ID || "price_annual",
+      monthly: process.env.STRIPE_PRICE_ID_MONTHLY || process.env.STRIPE_MONTHLY_PRICE_ID || "price_monthly",
+      annual: process.env.STRIPE_PRICE_ID_ANNUAL || process.env.STRIPE_ANNUAL_PRICE_ID || "price_annual",
     };
 
     const domains = process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost";
