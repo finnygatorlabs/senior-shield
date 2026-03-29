@@ -377,7 +377,7 @@ router.delete("/account", requireAuth, async (req: AuthRequest, res) => {
     await db.execute(sql`DELETE FROM facility_residents WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM user_tiers WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM voice_assistance_history WHERE user_id = ${userId}`);
-    await db.execute(sql`DELETE FROM family_relationships WHERE senior_user_id = ${userId} OR adult_child_user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM family_relationships WHERE senior_id = ${userId} OR adult_child_id = ${userId}`);
     await db.execute(sql`DELETE FROM users WHERE id = ${userId}`);
 
     res.json({ success: true, message: "Account deleted successfully" });
