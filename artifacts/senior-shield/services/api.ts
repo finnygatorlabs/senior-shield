@@ -310,6 +310,14 @@ export const userApi = {
   updateProfile(data: Record<string, any>, token?: string) {
     return request("/user/profile", { method: "PUT", body: data, token });
   },
+
+  getPreferences(token?: string) {
+    return request("/user/preferences", { token });
+  },
+
+  updatePreferences(data: Record<string, any>, token?: string) {
+    return request("/user/preferences", { method: "PUT", body: data, token });
+  },
 };
 
 

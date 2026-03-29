@@ -74,7 +74,14 @@ export default function OnboardingStep2() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      await userApi.updateProfile({ font_size: fontSize, preferred_voice: voice }, user?.token);
+      const assistantName = voice === "male" ? "Max" : "Ava";
+      const ttsVoice = voice === "male" ? "echo" : "nova";
+      await userApi.updatePreferences({
+        font_size: fontSize,
+        preferred_voice: voice,
+        assistant_name: assistantName,
+        tts_voice: ttsVoice,
+      }, user?.token);
     } catch {}
 
     router.push("/onboarding/step3");
