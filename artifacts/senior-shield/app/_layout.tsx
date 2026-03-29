@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -34,6 +35,14 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading) return;
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+      if (path.includes("google-callback") || hash.includes("access_token")) {
+        return;
+      }
+    }
 
     if (!hasInitialRouted.current) {
       hasInitialRouted.current = true;
