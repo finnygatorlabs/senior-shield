@@ -75,10 +75,9 @@ export default function OnboardingStep3() {
 
       await userApi.updateProfile({ onboarding_completed: true }, user?.token);
 
-      updateUser({ onboarding_completed: true });
-      router.replace("/(tabs)/home");
+      router.replace("/onboarding/welcome-tour");
     } catch (err) {
-      router.replace("/(tabs)/home");
+      router.replace("/onboarding/welcome-tour");
     } finally {
       setLoading(false);
     }

@@ -39,7 +39,7 @@ function RootLayoutNav() {
     if (Platform.OS === "web" && typeof window !== "undefined") {
       const path = window.location.pathname;
       const hash = window.location.hash;
-      if (path.includes("google-callback") || hash.includes("access_token")) {
+      if (path.includes("google-callback") || hash.includes("access_token") || path.includes("welcome-tour")) {
         return;
       }
     }
