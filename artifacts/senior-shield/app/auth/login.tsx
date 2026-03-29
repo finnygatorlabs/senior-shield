@@ -20,6 +20,7 @@ import * as Haptics from "expo-haptics";
 import * as Google from "expo-auth-session/providers/google";
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/AuthContext";
 import GoogleLogo from "@/components/GoogleLogo";
 
@@ -158,6 +159,19 @@ export default function LoginScreen() {
     }
   }, [googleResponse]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    function handleStorage(e: StorageEvent) {
+      if (e.key === "seniorshield_google_auth_complete" && e.newValue) {
+        refreshUser();
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   function handleGoogleSignIn() {
     setError("");
     if (Platform.OS === "web") {
@@ -173,14 +187,38 @@ export default function LoginScreen() {
 
       const popup = window.open(url, "google-auth", "width=500,height=600,menubar=no,toolbar=no");
 
+      if (!popup) {
+        showError("Popup was blocked. Please allow popups for this site.");
+        setSocialLoading(false);
+        return;
+      }
+
+      let popupClosed = false;
       const poll = setInterval(async () => {
-        if (!popup || popup.closed) {
+        if (popup.closed && !popupClosed) {
+          popupClosed = true;
           clearInterval(poll);
-          await refreshUser();
-          setTimeout(async () => {
+          let found = false;
+          for (let i = 0; i < 15; i++) {
+            await new Promise(r => setTimeout(r, 400));
+            const stored = localStorage.getItem("seniorshield_google_auth_complete");
+            if (stored) {
+              try {
+                const userData = JSON.parse(stored);
+                if (userData.token) {
+                  await AsyncStorage.setItem("seniorshield_user", JSON.stringify(userData));
+                  await refreshUser();
+                  found = true;
+                  break;
+                }
+              } catch (e) {}
+            }
             await refreshUser();
-            setSocialLoading(false);
-          }, 500);
+          }
+          setSocialLoading(false);
+          if (!found) {
+            showError("Sign in did not complete. Please try again.");
+          }
         }
       }, 300);
     } else {
