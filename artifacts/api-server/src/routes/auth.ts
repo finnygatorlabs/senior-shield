@@ -357,12 +357,24 @@ router.delete("/account", requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    await db.execute(sql`DELETE FROM alerts WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM alerts WHERE recipient_id = ${userId} OR related_senior_id = ${userId}`);
+    await db.execute(sql`DELETE FROM daily_reminder_responses WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM daily_reminders WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM hearing_aid_connection_logs WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM hearing_aid_settings WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM user_hearing_aids WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM contact_memory WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM conversation_sessions WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM analytics_events WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM contacts WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM error_logs WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM scam_analysis WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM scam_detection_feedback WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM support_tickets WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM subscriptions WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM telecom_accounts WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM insurance_accounts WHERE user_id = ${userId}`);
+    await db.execute(sql`DELETE FROM facility_residents WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM user_tiers WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM voice_assistance_history WHERE user_id = ${userId}`);
     await db.execute(sql`DELETE FROM family_relationships WHERE senior_user_id = ${userId} OR adult_child_user_id = ${userId}`);
