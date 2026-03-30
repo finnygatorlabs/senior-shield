@@ -263,12 +263,18 @@ router.get("/learning-health", (_req: any, res: any) => {
 
 router.use("/learning-api", (req: any, res: any) => {
   const targetPath = "/api" + req.url;
+  const bodyStr = req.body ? JSON.stringify(req.body) : undefined;
+  const headers: Record<string, string> = {
+    host: "localhost:3000",
+    "content-type": "application/json",
+  };
+  if (bodyStr) headers["content-length"] = Buffer.byteLength(bodyStr).toString();
   const options: http.RequestOptions = {
     hostname: "localhost",
     port: 3000,
     path: targetPath,
     method: req.method,
-    headers: { ...req.headers, host: "localhost:3000" },
+    headers,
   };
   const proxyReq = http.request(options, (proxyRes) => {
     res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
@@ -277,7 +283,10 @@ router.use("/learning-api", (req: any, res: any) => {
   proxyReq.on("error", () => {
     res.status(502).json({ error: "Adaptive Learning Server unavailable" });
   });
-  req.pipe(proxyReq, { end: true });
+  if (bodyStr) {
+    proxyReq.write(bodyStr);
+  }
+  proxyReq.end();
 });
 
 export default router;

@@ -1,0 +1,45 @@
+{
+  "senior_id": "proxy_test_001",
+  "personalization_score": 8,
+  "conversation_count": 1,
+  "last_updated": "2026-03-30T12:06:27.180Z",
+  "basic_info": {
+    "name": "Proxy Test",
+    "location": "Test City",
+    "timezone": "UTC"
+  },
+  "discovered_interests": [
+    {
+      "topic": "cooking",
+      "mentions": 1,
+      "confidence": 0.5,
+      "details": []
+    }
+  ],
+  "emotional_patterns": {
+    "happy_triggers": [
+      "cooking"
+    ],
+    "quiet_triggers": [],
+    "excited_triggers": []
+  },
+  "conversation_preferences": {
+    "preferred_topics": [],
+    "topics_to_avoid": [],
+    "conversation_style": "casual_friendly"
+  },
+  "memory_anchors": [],
+  "behavioral_patterns": {
+    "engagement_level": "high",
+    "response_pattern": "direct_responder"
+  },
+  "learning_history": [
+    {
+      "call_number": 0,
+      "discovery": "Discovered interest: cooking",
+      "confidence": 0.5,
+      "timestamp": "2026-03-30T12:06:27.178Z"
+    }
+  ],
+  "topics_to_avoid": []
+}
