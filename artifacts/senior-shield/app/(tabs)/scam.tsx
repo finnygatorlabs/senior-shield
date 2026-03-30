@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import { usePreferences } from "@/context/PreferencesContext";
 import PageHeader from "@/components/PageHeader";
-import { scamApi, familyApi, ApiError } from "@/services/api";
+import PremiumGate from "@/components/PremiumGate";
+import { scamApi, familyApi, userApi, ApiError } from "@/services/api";
 
 interface AttachedFile {
   uri: string;
@@ -131,6 +132,23 @@ export default function ScamScreen() {
   const [alertSent, setAlertSent] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const [attachment, setAttachment] = useState<AttachedFile | null>(null);
+  const [showPremiumGate, setShowPremiumGate] = useState(false);
+  const [scamUsage, setScamUsage] = useState<{ count: number; limit: number; remaining: number; locked: boolean } | null>(null);
+  const [isPremium, setIsPremium] = useState(true);
+
+  const fetchUsage = useCallback(async () => {
+    try {
+      const data = await userApi.getFeatureUsage(user?.token);
+      setIsPremium(!!data.isPremium);
+      if (data.usage?.scam_analyze) {
+        setScamUsage(data.usage.scam_analyze);
+      }
+    } catch {}
+  }, [user?.token]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
 
   function showAttachOptions() {
     if (Platform.OS === "web") {
@@ -248,6 +266,11 @@ export default function ScamScreen() {
       return;
     }
 
+    if (!isPremium && scamUsage && scamUsage.remaining <= 0) {
+      setShowPremiumGate(true);
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     setFeedbackSent(false);
@@ -298,6 +321,18 @@ export default function ScamScreen() {
           ? Haptics.NotificationFeedbackType.Warning
           : Haptics.NotificationFeedbackType.Success
       );
+
+      if (!isPremium) {
+        try {
+          const usageResult = await userApi.incrementFeatureUsage("scam_analyze", user?.token);
+          setScamUsage({
+            count: usageResult.count,
+            limit: usageResult.limit,
+            remaining: usageResult.remaining,
+            locked: !usageResult.allowed,
+          });
+        } catch {}
+      }
     } catch (err) {
       Alert.alert("Error", "Could not analyze. Please check your connection.");
     } finally {
@@ -339,6 +374,16 @@ export default function ScamScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <PageHeader screenTitle="Scam Analyzer" />
+
+      <PremiumGate
+        visible={showPremiumGate}
+        onClose={() => setShowPremiumGate(false)}
+        feature="scam_analyze"
+        usageCount={scamUsage?.count}
+        usageLimit={scamUsage?.limit}
+        description="You've used all your free scam scans. Upgrade to Premium for unlimited scam analysis and real-time protection."
+      />
+
     <ScrollView
       contentContainerStyle={[
         styles.content,
@@ -347,6 +392,21 @@ export default function ScamScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+
+      {!isPremium && scamUsage && !result && (
+        <View style={[styles.usageBanner, { backgroundColor: scamUsage.remaining > 0 ? '#EFF6FF' : '#FEF2F2' }]}>
+          <Ionicons
+            name={scamUsage.remaining > 0 ? "information-circle" : "lock-closed"}
+            size={18}
+            color={scamUsage.remaining > 0 ? "#2563EB" : "#DC2626"}
+          />
+          <Text style={[styles.usageBannerText, { color: scamUsage.remaining > 0 ? '#1E40AF' : '#991B1B' }]}>
+            {scamUsage.remaining > 0
+              ? `${scamUsage.remaining} free scan${scamUsage.remaining === 1 ? '' : 's'} remaining`
+              : 'No free scans left — upgrade to Premium'}
+          </Text>
+        </View>
+      )}
 
       <View style={[styles.inputCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
         <View style={styles.inputHeader}>
@@ -677,6 +737,20 @@ export default function ScamScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 20 },
+  usageBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  usageBannerText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    flex: 1,
+  },
   inputCard: { borderRadius: 20, borderWidth: 1, padding: 20, marginBottom: 24, gap: 14 },
   inputHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   inputLabel: { fontFamily: "Inter_500Medium", flex: 1 },

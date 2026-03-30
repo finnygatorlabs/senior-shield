@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/context/AuthContext";
 import PageHeader from "@/components/PageHeader";
 import ConfirmModal from "@/components/ConfirmModal";
-import { familyApi } from "@/services/api";
+import PremiumGate from "@/components/PremiumGate";
+import { familyApi, userApi } from "@/services/api";
 
 interface FamilyMember {
   id: string;
@@ -48,6 +49,15 @@ export default function FamilyScreen() {
   const [relationship, setRelationship] = useState("Daughter");
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [showPremiumGate, setShowPremiumGate] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
+
+  const fetchUsage = useCallback(async () => {
+    try {
+      const data = await userApi.getFeatureUsage(user?.token);
+      setIsPremium(!!data.isPremium);
+    } catch {}
+  }, [user?.token]);
 
   async function fetchMembers() {
     try {
@@ -61,16 +71,31 @@ export default function FamilyScreen() {
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+    fetchUsage();
+  }, [user?.token]);
 
-  const atLimit = members.length >= MAX_FAMILY_MEMBERS;
+  const FREE_FAMILY_LIMIT = 1;
+  const effectiveLimit = isPremium ? MAX_FAMILY_MEMBERS : FREE_FAMILY_LIMIT;
+  const atLimit = members.length >= effectiveLimit;
+
+  function handleAddPress() {
+    if (!isPremium && members.length >= FREE_FAMILY_LIMIT) {
+      setShowPremiumGate(true);
+      return;
+    }
+    if (members.length >= MAX_FAMILY_MEMBERS) {
+      Alert.alert("Limit Reached", `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`);
+      return;
+    }
+    setShowAddModal(true);
+  }
 
   async function addMember() {
     if (!email.trim()) {
       Alert.alert("Missing email", "Please enter your family member's email address.");
       return;
     }
-    if (atLimit) {
+    if (members.length >= MAX_FAMILY_MEMBERS) {
       Alert.alert("Limit Reached", `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`);
       return;
     }
@@ -109,6 +134,15 @@ export default function FamilyScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <PageHeader screenTitle="Family Circle" />
+
+      <PremiumGate
+        visible={showPremiumGate}
+        onClose={() => setShowPremiumGate(false)}
+        feature="family_members"
+        usageCount={members.length}
+        usageLimit={FREE_FAMILY_LIMIT}
+        description="Free accounts include 1 family member. Upgrade to Premium to add up to 3 family members for full protection."
+      />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -121,17 +155,23 @@ export default function FamilyScreen() {
             {members.length} of {MAX_FAMILY_MEMBERS} members
           </Text>
           <Pressable
-            onPress={() => {
-              if (atLimit) {
-                Alert.alert("Limit Reached", `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`);
-              } else {
-                setShowAddModal(true);
-              }
-            }}
-            style={[styles.addButton, atLimit && { opacity: 0.5 }]}
+            onPress={handleAddPress}
+            style={[styles.addButton, atLimit && !isPremium && { opacity: 0.7 }]}
           >
-            <Ionicons name="add" size={22} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Add Member</Text>
+            {!isPremium && members.length >= FREE_FAMILY_LIMIT ? (
+              <>
+                <Ionicons name="lock-closed" size={18} color="#F59E0B" />
+                <Text style={{ color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Add Member</Text>
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumBadgeText}>Premium</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Ionicons name="add" size={22} color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>Add Member</Text>
+              </>
+            )}
           </Pressable>
         </View>
 
@@ -157,7 +197,7 @@ export default function FamilyScreen() {
               Add a family member to start receiving scam protection alerts
             </Text>
             <Pressable
-              onPress={() => setShowAddModal(true)}
+              onPress={handleAddPress}
               style={styles.emptyButton}
             >
               <Ionicons name="add" size={20} color="#FFFFFF" />
@@ -336,6 +376,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
+  },
+  premiumBadge: {
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 2,
+  },
+  premiumBadgeText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   infoCard: {
     flexDirection: "row",

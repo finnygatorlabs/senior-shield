@@ -1,7 +1,7 @@
 import { Router, IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, userTiersTable, featureUsageTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
 
 const router: IRouter = Router();
@@ -135,6 +135,123 @@ router.put("/preferences", requireAuth, async (req: AuthRequest, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Update preferences error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+const FREE_LIMITS: Record<string, number> = {
+  scam_analyze: 3,
+  family_members: 1,
+};
+
+router.get("/feature-usage", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const [tier] = await db
+      .select()
+      .from(userTiersTable)
+      .where(eq(userTiersTable.user_id, req.user!.userId))
+      .limit(1);
+
+    const isPremium = tier && (tier.tier === "premium" || tier.tier === "premium_paid");
+
+    const usageRows = await db
+      .select()
+      .from(featureUsageTable)
+      .where(eq(featureUsageTable.user_id, req.user!.userId));
+
+    const usage: Record<string, { count: number; limit: number; remaining: number; locked: boolean }> = {};
+
+    for (const [feature, limit] of Object.entries(FREE_LIMITS)) {
+      const row = usageRows.find((r) => r.feature === feature);
+      const count = row?.usage_count ?? 0;
+      usage[feature] = {
+        count,
+        limit: isPremium ? -1 : limit,
+        remaining: isPremium ? -1 : Math.max(0, limit - count),
+        locked: !isPremium && count >= limit,
+      };
+    }
+
+    res.json({ isPremium, usage });
+  } catch (err) {
+    req.log.error({ err }, "Get feature usage error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.post("/feature-usage/increment", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { feature } = req.body;
+    if (!feature || !FREE_LIMITS[feature]) {
+      res.status(400).json({ error: "Invalid feature" });
+      return;
+    }
+
+    const [tier] = await db
+      .select()
+      .from(userTiersTable)
+      .where(eq(userTiersTable.user_id, req.user!.userId))
+      .limit(1);
+
+    const isPremium = tier && (tier.tier === "premium" || tier.tier === "premium_paid");
+
+    if (isPremium) {
+      res.json({ allowed: true, isPremium: true, remaining: -1 });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(featureUsageTable)
+      .where(
+        and(
+          eq(featureUsageTable.user_id, req.user!.userId),
+          eq(featureUsageTable.feature, feature),
+        ),
+      )
+      .limit(1);
+
+    const currentCount = existing?.usage_count ?? 0;
+    const limit = FREE_LIMITS[feature];
+
+    if (currentCount >= limit) {
+      res.json({
+        allowed: false,
+        isPremium: false,
+        count: currentCount,
+        limit,
+        remaining: 0,
+      });
+      return;
+    }
+
+    if (existing) {
+      await db
+        .update(featureUsageTable)
+        .set({
+          usage_count: currentCount + 1,
+          last_used_at: new Date(),
+          updated_at: new Date(),
+        })
+        .where(eq(featureUsageTable.id, existing.id));
+    } else {
+      await db.insert(featureUsageTable).values({
+        user_id: req.user!.userId,
+        feature,
+        usage_count: 1,
+        last_used_at: new Date(),
+      });
+    }
+
+    res.json({
+      allowed: true,
+      isPremium: false,
+      count: currentCount + 1,
+      limit,
+      remaining: Math.max(0, limit - (currentCount + 1)),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Increment feature usage error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

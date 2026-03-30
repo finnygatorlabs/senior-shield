@@ -1,9 +1,11 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/context/AuthContext";
+import { userApi } from "@/services/api";
 
 const TAB_BG = "#06102E";
 const TAB_ACTIVE = "#FFFFFF";
@@ -24,9 +26,59 @@ function TabLabel({ label, color }: { label: string; color: string }) {
   );
 }
 
+function PremiumTabIcon({
+  name,
+  color,
+  size,
+  showBadge,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  color: string;
+  size: number;
+  showBadge: boolean;
+}) {
+  return (
+    <View>
+      <Ionicons name={name} size={size} color={color} />
+      {showBadge && (
+        <View style={badgeStyles.dot}>
+          <Ionicons name="star" size={7} color="#FFFFFF" />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  dot: {
+    position: "absolute",
+    top: -2,
+    right: -6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#F59E0B",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
 export default function TabLayout() {
   const isIOS = Platform.OS === "ios";
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [isPremium, setIsPremium] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await userApi.getFeatureUsage(user?.token);
+        setIsPremium(!!data.isPremium);
+      } catch {}
+    })();
+  }, [user?.token]);
+
+  const showBadge = !isPremium;
 
   return (
     <Tabs
@@ -81,7 +133,9 @@ export default function TabLayout() {
               Scam{"\n"}Analyzer
             </Text>
           ),
-          tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <PremiumTabIcon name="shield-checkmark" color={color} size={size} showBadge={showBadge} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -97,7 +151,9 @@ export default function TabLayout() {
         options={{
           title: "Family",
           tabBarLabel: ({ color }) => <TabLabel label="Family" color={color} />,
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <PremiumTabIcon name="people" color={color} size={size} showBadge={showBadge} />
+          ),
         }}
       />
       <Tabs.Screen

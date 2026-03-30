@@ -322,6 +322,14 @@ export const userApi = {
   updatePreferences(data: Record<string, any>, token?: string) {
     return request("/user/preferences", { method: "PUT", body: data, token });
   },
+
+  getFeatureUsage(token?: string) {
+    return request("/user/feature-usage", { token });
+  },
+
+  incrementFeatureUsage(feature: string, token?: string) {
+    return request("/user/feature-usage/increment", { method: "POST", body: { feature }, token });
+  },
 };
 
 

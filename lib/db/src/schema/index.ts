@@ -457,3 +457,16 @@ export const dailyReminderResponsesTable = pgTable("daily_reminder_responses", {
 });
 
 export type DailyReminderResponse = typeof dailyReminderResponsesTable.$inferSelect;
+
+export const featureUsageTable = pgTable("feature_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+  feature: varchar("feature").notNull(),
+  usage_count: integer("usage_count").notNull().default(0),
+  last_used_at: timestamp("last_used_at").defaultNow(),
+  reset_at: timestamp("reset_at"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (t) => [unique().on(t.user_id, t.feature)]);
+
+export type FeatureUsage = typeof featureUsageTable.$inferSelect;

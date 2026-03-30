@@ -24,6 +24,7 @@ import { usePreferences } from "@/context/PreferencesContext";
 import FluidOrb from "@/components/FluidOrb";
 import PageHeader from "@/components/PageHeader";
 import MicPermissionModal from "@/components/MicPermissionModal";
+import { useRouter } from "expo-router";
 import { voiceApi, conversationApi, userApi, API_BASE } from "@/services/api";
 import { getDailyQuote } from "@/constants/dailyQuotes";
 
@@ -198,6 +199,18 @@ export default function HomeScreen() {
   const [voiceMuted, setVoiceMuted] = useState(false);
   const voiceMutedRef = useRef(false);
   useEffect(() => { voiceMutedRef.current = voiceMuted; }, [voiceMuted]);
+
+  const router = useRouter();
+  const [isPremium, setIsPremium] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await userApi.getFeatureUsage(user?.token);
+        setIsPremium(!!data.isPremium);
+      } catch {}
+    })();
+  }, [user?.token]);
 
   const dailyQuote = useMemo(() => getDailyQuote(), []);
   const quoteSlideAnim = useRef(new Animated.Value(0)).current;
@@ -1068,6 +1081,32 @@ export default function HomeScreen() {
         </Animated.View>
       )}
 
+      {/* ── Premium Upgrade Banner ── */}
+      {!isPremium && (
+        <Pressable
+          onPress={() => router.push("/subscription")}
+          style={({ pressed }) => [styles.premiumBanner, pressed && { opacity: 0.85 }]}
+        >
+          <LinearGradient
+            colors={["#16A34A", "#059669"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.premiumBannerGradient}
+          >
+            <View style={styles.premiumBannerLeft}>
+              <Ionicons name="star" size={22} color="#FDE68A" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.premiumBannerTitle, { fontSize: ts.base }]}>Unlock Premium Protection</Text>
+                <Text style={[styles.premiumBannerSub, { fontSize: ts.xs }]}>Scam detection, family alerts, and more</Text>
+              </View>
+            </View>
+            <View style={styles.premiumBannerArrow}>
+              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+            </View>
+          </LinearGradient>
+        </Pressable>
+      )}
+
       {/* ── Messages ── */}
       <ScrollView
         ref={scrollRef}
@@ -1256,6 +1295,42 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  premiumBanner: {
+    marginHorizontal: 20,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  premiumBannerGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  premiumBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  premiumBannerTitle: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
+  },
+  premiumBannerSub: {
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+  premiumBannerArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   quoteBanner: {
     paddingHorizontal: 24,
     paddingTop: 28,
