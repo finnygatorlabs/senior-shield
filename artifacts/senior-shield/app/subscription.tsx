@@ -255,11 +255,6 @@ export default function SubscriptionScreen() {
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </Pressable>
         <Text style={styles.headerTitle}>{isSubscribed ? 'Manage Subscription' : 'Choose Payment Method'}</Text>
-        {!isSubscribed && (
-          <View style={styles.stepIndicator}>
-            <Text style={styles.stepText}>Step 1 of 2</Text>
-          </View>
-        )}
       </View>
 
       <ScrollView
@@ -326,10 +321,6 @@ export default function SubscriptionScreen() {
           </>
         ) : (
         <>
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: '50%' }]} />
-        </View>
-
         <View style={styles.headlineSection}>
           <Text style={styles.headline}>Unlock Premium Features</Text>
           <Text style={styles.subheadline}>
