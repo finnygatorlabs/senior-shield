@@ -26,6 +26,7 @@ dotenv.config();
 // Import backend services and routes
 // These come from SeniorShield-Backend-Implementation.ts and SeniorShield-Backend-Routes.ts
 import routes from './routes/SeniorShield-Backend-Routes';
+import freeApisRoutes from './routes/SeniorShield-Free-APIs-Routes';
 import { SeniorProfileService } from './services/SeniorShield-Backend-Implementation';
 
 // ============================================================================
@@ -129,6 +130,7 @@ global.seniorShieldContent = contentCache;
  * - Health check
  */
 app.use('/api', routes);
+app.use('/api/free-apis', freeApisRoutes);
 
 // ============================================================================
 // STATIC FILES (for frontend)

@@ -48,6 +48,8 @@ The project is built as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9
 - Backend services: `SeniorProfileService` (profile CRUD, memory anchors, interests), `AdaptiveLearningEngine` (conversation analysis, pattern extraction), `ContextAssemblyEngine` (LLM prompt assembly, question selection).
 - Dev script: `pnpm run dev:learning` runs the standalone adaptive learning server via ts-node.
 - Admin test page: `src/frontend/admin-test.html` served at `/admin/test` — 12 API tests + live chat interface.
+- AI Chat endpoint: POST `/api/chat` — uses OpenAI with personalization context from adaptive learning, enriched with real-time data from free APIs (weather, news, jokes, trivia, history, quotes) when detected in user messages.
+- Free APIs Integration: `src/backend/services/SeniorShield-Free-APIs-Integration.ts` + `src/backend/routes/SeniorShield-Free-APIs-Routes.ts` — mounted at `/api/free-apis/*`. Includes: News API (requires NEWS_API_KEY), OpenWeatherMap (requires WEATHER_API_KEY), JokeAPI (free, no key), Open Trivia DB (free, no key), On This Day history (free, no key), ZenQuotes (free, no key). Daily digest endpoint combines all sources.
 - Workflow: "Adaptive Learning Server" runs on port 3000.
 
 **Monorepo Structure**:
