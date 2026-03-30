@@ -208,8 +208,8 @@ router.post("/create-checkout", requireAuth, async (req: AuthRequest, res) => {
         quantity: 1,
       }],
       mode: "subscription",
-      success_url: `${baseUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/billing/cancel`,
+      success_url: `${baseUrl}/api/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/api/billing/cancel`,
       client_reference_id: req.user!.userId,
       metadata: {
         user_id: req.user!.userId,
@@ -390,6 +390,47 @@ router.post("/webhook", async (req, res) => {
     req.log.error({ err, eventType: event.type }, "Webhook processing error");
     res.status(500).json({ error: "Webhook processing failed" });
   }
+});
+
+function billingPage(title: string, message: string, icon: string, autoClose: boolean) {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} - SeniorShield</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0A1628 0%,#0E2D6B 50%,#1A3F7A 100%);color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:48px;text-align:center;max-width:420px;backdrop-filter:blur(20px)}
+.icon{font-size:64px;margin-bottom:16px}
+h1{font-size:24px;margin-bottom:12px}
+p{color:rgba(255,255,255,0.7);font-size:16px;line-height:1.5;margin-bottom:24px}
+.hint{font-size:13px;color:rgba(255,255,255,0.4)}
+</style></head><body>
+<div class="card">
+<div class="icon">${icon}</div>
+<h1>${title}</h1>
+<p>${message}</p>
+<p class="hint">${autoClose ? 'This tab will close automatically...' : 'You can close this tab and return to the app.'}</p>
+</div>
+${autoClose ? '<script>setTimeout(function(){window.close()},3000);</script>' : ''}
+</body></html>`;
+}
+
+router.get("/success", (req, res) => {
+  res.send(billingPage(
+    "Payment Successful!",
+    "Your SeniorShield subscription is now active. Thank you for subscribing!",
+    "✅",
+    true
+  ));
+});
+
+router.get("/cancel", (req, res) => {
+  res.send(billingPage(
+    "Payment Cancelled",
+    "No charges were made. You can return to the app and try again anytime.",
+    "↩️",
+    true
+  ));
 });
 
 export default router;
