@@ -102,7 +102,7 @@ export default function FastTrackOnboarding() {
   }
 
   function addFamilyMember() {
-    if (memberName.trim() && memberEmail.trim() && familyMembers.length < 3) {
+    if (memberName.trim() && memberEmail.trim() && familyMembers.length < 5) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setFamilyMembers([...familyMembers, { name: memberName.trim(), email: memberEmail.trim(), relationship: memberRelationship }]);
       setMemberName("");
@@ -364,7 +364,7 @@ export default function FastTrackOnboarding() {
               </View>
             )}
 
-            {familyMembers.length < 3 && (
+            {familyMembers.length < 5 && (
               <View style={styles.addFamilySection}>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="person-add-outline" size={20} color="rgba(255,255,255,0.5)" />

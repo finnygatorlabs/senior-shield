@@ -33,7 +33,7 @@ interface FamilyMember {
 }
 
 const RELATIONSHIPS = ["Son", "Daughter", "Brother", "Sister", "Spouse", "Significant Other", "Grandson", "Granddaughter", "Friend", "Caregiver"];
-const MAX_FAMILY_MEMBERS = 3;
+const MAX_FAMILY_MEMBERS = 5;
 
 export default function FamilyScreen() {
   const { theme } = useTheme();
@@ -141,7 +141,7 @@ export default function FamilyScreen() {
         feature="family_members"
         usageCount={members.length}
         usageLimit={FREE_FAMILY_LIMIT}
-        description="Free accounts include 1 family member. Upgrade to Premium to add up to 3 family members for full protection."
+        description="Free accounts include 1 family member. Upgrade to Premium to add up to 5 family members for full protection."
       />
       <ScrollView
         contentContainerStyle={[

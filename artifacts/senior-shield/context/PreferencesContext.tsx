@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAuth } from "@/context/AuthContext";
 import { TEXT_SIZES, TextSizes } from "@/constants/textSizes";
 
-export const DEFAULT_NAMES: Record<string, string> = { female: "Ava", male: "Max" };
+export const DEFAULT_NAMES: Record<string, string> = { female: "Ida", male: "Clay" };
 
 export type FontSize = "normal" | "large" | "extra_large";
 export type ColorScheme = "light" | "dark";
@@ -45,7 +45,7 @@ const DEFAULT_PREFS: Preferences = {
   haptic_feedback: true,
   captions_enabled: true,
   data_collection_enabled: true,
-  assistant_name: "Ava",
+  assistant_name: "Ida",
   daily_quotes_enabled: true,
 };
 

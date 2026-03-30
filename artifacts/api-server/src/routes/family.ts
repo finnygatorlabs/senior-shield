@@ -41,7 +41,8 @@ router.get("/members", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-const MAX_FAMILY_MEMBERS = 3;
+const FREE_FAMILY_LIMIT = 1;
+const PREMIUM_FAMILY_LIMIT = 5;
 
 router.post("/add-member", requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -59,16 +60,27 @@ router.post("/add-member", requireAuth, async (req: AuthRequest, res) => {
       lastName = parts.length > 1 ? parts.slice(1).join(" ") : undefined;
     }
 
+    const [userRow] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
+    const isPremium = !!(userRow?.stripe_subscription_id || (userRow?.premium_end_date && new Date(userRow.premium_end_date) > new Date()));
+    const maxMembers = isPremium ? PREMIUM_FAMILY_LIMIT : FREE_FAMILY_LIMIT;
+
     const existingMembers = await db
       .select()
       .from(familyRelationshipsTable)
       .where(eq(familyRelationshipsTable.senior_id, req.user!.userId));
 
-    if (existingMembers.length >= MAX_FAMILY_MEMBERS) {
-      res.status(400).json({
-        error: "Limit reached",
-        message: `You can add up to ${MAX_FAMILY_MEMBERS} family members. Please remove a member before adding a new one.`,
-      });
+    if (existingMembers.length >= maxMembers) {
+      if (!isPremium) {
+        res.status(403).json({
+          error: "Upgrade required",
+          message: `Free accounts can add up to ${FREE_FAMILY_LIMIT} family member. Upgrade to Premium to add up to ${PREMIUM_FAMILY_LIMIT} family members.`,
+        });
+      } else {
+        res.status(400).json({
+          error: "Limit reached",
+          message: `You can add up to ${PREMIUM_FAMILY_LIMIT} family members. Please remove a member before adding a new one.`,
+        });
+      }
       return;
     }
 

@@ -1059,6 +1059,29 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <PageHeader showTagline greeting={headerGreeting} />
 
+      {/* ── Premium Upgrade Banner (compact) ── */}
+      {!isPremium && (
+        <Pressable
+          onPress={() => router.push("/subscription")}
+          style={({ pressed }) => [styles.premiumBanner, pressed && { opacity: 0.85 }]}
+        >
+          <LinearGradient
+            colors={["#16A34A", "#059669"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.premiumBannerGradient}
+          >
+            <View style={styles.premiumBannerLeft}>
+              <Ionicons name="star" size={16} color="#FDE68A" />
+              <Text style={[styles.premiumBannerTitle, { fontSize: ts.sm }]}>Unlock Premium</Text>
+            </View>
+            <View style={styles.premiumBannerArrow}>
+              <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+            </View>
+          </LinearGradient>
+        </Pressable>
+      )}
+
       {/* ── Daily Quote Banner ── */}
       {prefs.daily_quotes_enabled && !quoteDismissed && (
         <Animated.View
@@ -1079,32 +1102,6 @@ export default function HomeScreen() {
             </Text>
           </View>
         </Animated.View>
-      )}
-
-      {/* ── Premium Upgrade Banner ── */}
-      {!isPremium && (
-        <Pressable
-          onPress={() => router.push("/subscription")}
-          style={({ pressed }) => [styles.premiumBanner, pressed && { opacity: 0.85 }]}
-        >
-          <LinearGradient
-            colors={["#16A34A", "#059669"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.premiumBannerGradient}
-          >
-            <View style={styles.premiumBannerLeft}>
-              <Ionicons name="star" size={22} color="#FDE68A" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.premiumBannerTitle, { fontSize: ts.base }]}>Unlock Premium Protection</Text>
-                <Text style={[styles.premiumBannerSub, { fontSize: ts.xs }]}>Scam detection, family alerts, and more</Text>
-              </View>
-            </View>
-            <View style={styles.premiumBannerArrow}>
-              <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
-            </View>
-          </LinearGradient>
-        </Pressable>
       )}
 
       {/* ── Messages ── */}
@@ -1305,13 +1302,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   premiumBannerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
     flex: 1,
   },
   premiumBannerTitle: {
@@ -1324,9 +1321,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   premiumBannerArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",

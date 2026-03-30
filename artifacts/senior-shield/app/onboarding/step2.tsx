@@ -76,7 +76,7 @@ export default function OnboardingStep2() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      const assistantName = voice === "male" ? "Max" : "Ava";
+      const assistantName = voice === "male" ? "Clay" : "Ida";
       const ttsVoice = voice === "male" ? "echo" : "nova";
       await userApi.updatePreferences({
         font_size: fontSize,
