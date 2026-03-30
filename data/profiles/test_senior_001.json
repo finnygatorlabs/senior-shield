@@ -1,10 +1,10 @@
 {
   "senior_id": "test_senior_001",
-  "personalization_score": 33,
-  "conversation_count": 6,
-  "last_updated": "2026-03-30T12:58:10.037Z",
+  "personalization_score": 41,
+  "conversation_count": 7,
+  "last_updated": "2026-03-30T13:08:54.993Z",
   "basic_info": {
-    "name": "Margaret Johnson",
+    "name": "Test User",
     "location": "Seattle, WA",
     "timezone": "America/Los_Angeles"
   },
@@ -16,13 +16,19 @@
       "details": []
     },
     {
-      "topic": "tomatoes",
-      "mentions": 1,
-      "confidence": 0.5,
+      "topic": "sports",
+      "mentions": 5,
+      "confidence": 0.8999999999999999,
       "details": []
     },
     {
-      "topic": "roses",
+      "topic": "family",
+      "mentions": 2,
+      "confidence": 0.6,
+      "details": []
+    },
+    {
+      "topic": "music",
       "mentions": 1,
       "confidence": 0.5,
       "details": []
@@ -31,8 +37,9 @@
   "emotional_patterns": {
     "happy_triggers": [
       "gardening",
-      "tomatoes",
-      "roses"
+      "sports",
+      "family",
+      "music"
     ],
     "quiet_triggers": [],
     "excited_triggers": []
@@ -52,19 +59,25 @@
       "call_number": 0,
       "discovery": "Discovered interest: gardening",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T12:19:21.176Z"
+      "timestamp": "2026-03-30T13:04:23.232Z"
     },
     {
-      "call_number": 0,
-      "discovery": "Discovered interest: tomatoes",
+      "call_number": 1,
+      "discovery": "Discovered interest: sports",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T12:19:21.176Z"
+      "timestamp": "2026-03-30T13:04:40.546Z"
     },
     {
-      "call_number": 0,
-      "discovery": "Discovered interest: roses",
+      "call_number": 2,
+      "discovery": "Discovered interest: family",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T12:19:21.177Z"
+      "timestamp": "2026-03-30T13:05:19.014Z"
+    },
+    {
+      "call_number": 6,
+      "discovery": "Discovered interest: music",
+      "confidence": 0.5,
+      "timestamp": "2026-03-30T13:08:54.993Z"
     }
   ],
   "topics_to_avoid": []
