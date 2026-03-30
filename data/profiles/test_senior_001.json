@@ -1,8 +1,8 @@
 {
   "senior_id": "test_senior_001",
-  "personalization_score": 21,
-  "conversation_count": 2,
-  "last_updated": "2026-03-30T04:42:38.929Z",
+  "personalization_score": 33,
+  "conversation_count": 6,
+  "last_updated": "2026-03-30T12:58:10.037Z",
   "basic_info": {
     "name": "Margaret Johnson",
     "location": "Seattle, WA",
@@ -52,19 +52,19 @@
       "call_number": 0,
       "discovery": "Discovered interest: gardening",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T04:42:13.618Z"
+      "timestamp": "2026-03-30T12:19:21.176Z"
     },
     {
       "call_number": 0,
       "discovery": "Discovered interest: tomatoes",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T04:42:13.619Z"
+      "timestamp": "2026-03-30T12:19:21.176Z"
     },
     {
       "call_number": 0,
       "discovery": "Discovered interest: roses",
       "confidence": 0.5,
-      "timestamp": "2026-03-30T04:42:13.619Z"
+      "timestamp": "2026-03-30T12:19:21.177Z"
     }
   ],
   "topics_to_avoid": []

@@ -4,6 +4,7 @@
  */
 
 import express, { Router, Request, Response } from 'express';
+import OpenAI from 'openai';
 import {
   SeniorProfileService,
   AdaptiveLearningEngine,
@@ -12,6 +13,11 @@ import {
   MemoryAnchor,
   DiscoveredInterest
 } from '../services/SeniorShield-Backend-Implementation';
+
+const openai = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+});
 
 const router = Router();
 
@@ -390,6 +396,77 @@ router.get('/learning-history/:seniorId', (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve learning history' });
+  }
+});
+
+// ============================================================================
+// AI CHAT ENDPOINT
+// ============================================================================
+
+router.post('/chat', async (req: Request, res: Response) => {
+  try {
+    const { seniorId, message } = req.body;
+
+    if (!seniorId || !message) {
+      return res.status(400).json({ error: 'Missing required fields: seniorId, message' });
+    }
+
+    let profile = profileService.getProfile(seniorId);
+    if (!profile) {
+      profileService.createProfile(seniorId, { name: 'User', location: 'Unknown', timezone: 'UTC' });
+      profile = profileService.getProfile(seniorId);
+    }
+
+    const systemPrompt = contextEngine.generateLLMPrompt(seniorId, message);
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 300,
+      temperature: 0.8,
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response right now.";
+
+    const topics: string[] = [];
+    const topicPatterns: Record<string, RegExp> = {
+      gardening: /garden|plant|flower|vegetable|grow|seed|soil/i,
+      cooking: /cook|recipe|bake|kitchen|meal|food/i,
+      family: /family|grandchild|grandson|granddaughter|daughter|son|wife|husband/i,
+      sports: /sport|game|team|baseball|football|basketball|soccer/i,
+      reading: /book|read|novel|author|library/i,
+      music: /music|song|sing|concert|instrument|piano|guitar/i,
+      travel: /travel|trip|vacation|visit|country|city/i,
+      health: /health|exercise|walk|doctor|medicine|wellness/i,
+    };
+    for (const [topic, pattern] of Object.entries(topicPatterns)) {
+      if (pattern.test(message) || pattern.test(aiResponse)) topics.push(topic);
+    }
+
+    const conversation: Conversation = {
+      conversation_id: `conv_${Date.now()}`,
+      senior_id: seniorId,
+      timestamp: new Date(),
+      senior_input: message,
+      ai_response: aiResponse,
+      topics_discussed: topics,
+      emotional_tone: 'positive',
+      engagement_score: 75 + Math.floor(Math.random() * 20),
+      duration_seconds: 0,
+    };
+    learningEngine.analyzeConversation(conversation);
+
+    res.json({
+      response: aiResponse,
+      personalizationScore: profile!.personalization_score,
+      conversationCount: profile!.conversation_count,
+    });
+  } catch (error: any) {
+    console.error('Chat error:', error?.message || error);
+    res.status(500).json({ error: 'Failed to generate AI response' });
   }
 });
 

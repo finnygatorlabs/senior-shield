@@ -401,23 +401,15 @@ async function sendChat() {
       profileCreated = true;
     }
 
-    const promptRes = await fetch(API_BASE + '/llm-prompt', {
+    const chatRes = await fetch(API_BASE + '/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seniorId: getSeniorId(), seniorInput: msg })
+      body: JSON.stringify({ seniorId: getSeniorId(), message: msg })
     });
-    const promptData = await promptRes.json();
+    const chatData = await chatRes.json();
 
-    const topics = extractTopics(msg);
-    const aiResponse = generateLocalResponse(msg, topics);
+    if (!chatRes.ok) throw new Error(chatData.error || 'Chat request failed');
 
-    await fetch(API_BASE + '/conversations', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seniorId: getSeniorId(), seniorInput: msg, aiResponse,
-        topicsDiscussed: topics, emotionalTone: 'positive', engagementScore: 75 + Math.floor(Math.random() * 20)
-      })
-    });
-
+    const aiResponse = chatData.response;
     const aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     msgs.innerHTML += `<div class="chat-msg ai">${escapeHtml(aiResponse)}<div class="time">${aiTime}</div></div>`;
     msgs.scrollTop = msgs.scrollHeight;
