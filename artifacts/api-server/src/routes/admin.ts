@@ -1,9 +1,15 @@
 import { Router, IRouter } from "express";
+import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import { db } from "@workspace/db";
 import { adminUsersTable, adminActivityLogTable, usersTable, scamAnalysisTable, voiceAssistanceHistoryTable, supportTicketsTable, subscriptionsTable, facilityAccountsTable } from "@workspace/db";
 import { eq, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
   if (process.env.NODE_ENV === "production") {
@@ -237,6 +243,41 @@ router.get("/activity-log", requireAdmin, async (req: any, res: any) => {
     req.log?.error({ err }, "Admin activity log error");
     res.status(500).json({ error: "Internal Server Error" });
   }
+});
+
+router.get("/learning-test", (_req: any, res: any) => {
+  const htmlPath = path.resolve(process.cwd(), "../../src/frontend/admin-test.html");
+  res.sendFile(htmlPath);
+});
+
+router.get("/learning-health", (_req: any, res: any) => {
+  const proxyReq = http.request({ hostname: "localhost", port: 3000, path: "/health", method: "GET" }, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+  proxyReq.on("error", () => {
+    res.status(502).json({ error: "Adaptive Learning Server unavailable" });
+  });
+  proxyReq.end();
+});
+
+router.use("/learning-api", (req: any, res: any) => {
+  const targetPath = "/api" + req.url;
+  const options: http.RequestOptions = {
+    hostname: "localhost",
+    port: 3000,
+    path: targetPath,
+    method: req.method,
+    headers: { ...req.headers, host: "localhost:3000" },
+  };
+  const proxyReq = http.request(options, (proxyRes) => {
+    res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+  proxyReq.on("error", () => {
+    res.status(502).json({ error: "Adaptive Learning Server unavailable" });
+  });
+  req.pipe(proxyReq, { end: true });
 });
 
 export default router;

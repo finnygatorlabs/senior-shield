@@ -231,11 +231,13 @@
 </div>
 
 <script>
-const API_BASE = window.location.origin + '/api';
+const isProxied = window.location.pathname.includes('/api/admin/learning-test');
+const API_BASE = isProxied ? window.location.origin + '/api/admin/learning-api' : window.location.origin + '/api';
+const HEALTH_PATH = isProxied ? '/api/admin/learning-health' : '/health';
 let profileCreated = false;
 
 const TESTS = [
-  { id: 'health', name: 'Health Check', desc: 'Check if the server is running', method: 'GET', path: '/health', noSeniorId: true, pathIsAbsolute: true },
+  { id: 'health', name: 'Health Check', desc: 'Check if the server is running', method: 'GET', path: HEALTH_PATH, noSeniorId: true, pathIsAbsolute: true },
   { id: 'create_profile', name: 'Create Profile', desc: 'Create a new senior profile', method: 'POST', path: '/profiles',
     body: () => ({ seniorId: getSeniorId(), name: 'Margaret Johnson', location: 'Seattle, WA', timezone: 'America/Los_Angeles' }) },
   { id: 'get_profile', name: 'Get Profile', desc: 'Retrieve the senior profile', method: 'GET', path: () => `/profiles/${getSeniorId()}` },
@@ -477,7 +479,7 @@ function escapeHtml(str) {
 
 async function checkHealth() {
   try {
-    const res = await fetch(window.location.origin + '/health');
+    const res = await fetch(window.location.origin + HEALTH_PATH);
     if (res.ok) {
       document.getElementById('statusDot').className = 'dot';
       document.getElementById('statusText').textContent = 'Server Online';
