@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -96,6 +96,48 @@ export default function SubscriptionScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', confirmLabel: 'OK', icon: 'information-circle-outline' as any });
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
+
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const data = await billingApi.getSubscription(user?.token);
+      setSubscriptionInfo(data);
+    } catch {
+      setSubscriptionInfo(null);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  }, [user?.token]);
+
+  useEffect(() => {
+    fetchSubscription();
+  }, [fetchSubscription]);
+
+  const handleCancelSubscription = async () => {
+    setCancelModalVisible(false);
+    try {
+      setLoading(true);
+      await billingApi.cancelSubscription(user?.token);
+      showModal(
+        'Subscription Cancelled',
+        'Your subscription has been cancelled. You\'ll continue to have access until the end of your current billing period.',
+        'checkmark-circle-outline'
+      );
+      fetchSubscription();
+    } catch {
+      showModal(
+        'Error',
+        'Failed to cancel subscription. Please try again or contact support.',
+        'alert-circle-outline'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isSubscribed = subscriptionInfo?.status === 'active' || subscriptionInfo?.status === 'cancelling';
 
   const showModal = (title: string, message: string, icon?: string) => {
     setModalConfig({ title, message, confirmLabel: 'OK', icon: (icon || 'information-circle-outline') as any });
@@ -191,10 +233,12 @@ export default function SubscriptionScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Choose Payment Method</Text>
-        <View style={styles.stepIndicator}>
-          <Text style={styles.stepText}>Step 2 of 3</Text>
-        </View>
+        <Text style={styles.headerTitle}>{isSubscribed ? 'Manage Subscription' : 'Choose Payment Method'}</Text>
+        {!isSubscribed && (
+          <View style={styles.stepIndicator}>
+            <Text style={styles.stepText}>Step 1 of 2</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -202,8 +246,55 @@ export default function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}
         style={{ position: 'relative' as any, zIndex: 5 }}
       >
+        {isSubscribed ? (
+          <>
+            <View style={styles.activeSubCard}>
+              <View style={styles.activeSubBadge}>
+                <Ionicons name="shield-checkmark" size={20} color="#34D399" />
+                <Text style={styles.activeSubBadgeText}>
+                  {subscriptionInfo?.status === 'cancelling' ? 'Cancelling' : 'Active'}
+                </Text>
+              </View>
+              <Text style={styles.activeSubTitle}>Premium Subscription</Text>
+              <Text style={styles.activeSubPlan}>
+                {subscriptionInfo?.billing_cycle === 'annual' ? 'Annual Plan — $203.90/year' : 'Monthly Plan — $19.99/month'}
+              </Text>
+              {subscriptionInfo?.status === 'cancelling' && (
+                <Text style={styles.activeSubNote}>
+                  Access continues until end of billing period
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.activeSubFeatures}>
+              <Text style={styles.activeSubFeaturesTitle}>Your Premium Features</Text>
+              {[
+                { icon: 'shield-checkmark', label: 'Real-time scam detection' },
+                { icon: 'people', label: 'Family alert system' },
+                { icon: 'mic', label: '24/7 voice assistance' },
+                { icon: 'warning', label: 'Emergency SOS' },
+                { icon: 'ear', label: 'Hearing aid support' },
+              ].map((f, i) => (
+                <View key={i} style={styles.activeSubFeatureRow}>
+                  <Ionicons name={f.icon as any} size={18} color="#34D399" />
+                  <Text style={styles.activeSubFeatureText}>{f.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {subscriptionInfo?.status !== 'cancelling' && (
+              <Pressable
+                style={({ pressed }) => [styles.cancelSubButton, pressed && { opacity: 0.7 }]}
+                onPress={() => setCancelModalVisible(true)}
+              >
+                <Text style={styles.cancelSubButtonText}>Cancel Subscription</Text>
+              </Pressable>
+            )}
+          </>
+        ) : (
+        <>
         <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: '66%' }]} />
+          <View style={[styles.progressBar, { width: '50%' }]} />
         </View>
 
         <View style={styles.headlineSection}>
@@ -400,7 +491,20 @@ export default function SubscriptionScreen() {
         <Text style={styles.termsText}>
           By continuing, you agree to our Terms of Service and Privacy Policy
         </Text>
+        </>
+        )}
       </ScrollView>
+
+      <ConfirmModal
+        visible={cancelModalVisible}
+        title="Cancel Subscription?"
+        message="Your subscription will remain active until the end of your current billing period. After that, you'll be downgraded to the free plan."
+        confirmLabel="Yes, Cancel"
+        cancelLabel="Keep Subscription"
+        onConfirm={handleCancelSubscription}
+        onCancel={() => setCancelModalVisible(false)}
+        icon="warning-outline"
+      />
 
       <ConfirmModal
         visible={modalVisible}
@@ -514,6 +618,84 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
+  activeSubCard: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#34D399',
+    padding: 24,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  activeSubBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(52,211,153,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  activeSubBadgeText: {
+    fontFamily: 'Inter_600SemiBold',
+    color: '#34D399',
+    fontSize: 13,
+  },
+  activeSubTitle: {
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+    fontSize: 22,
+    marginBottom: 8,
+  },
+  activeSubPlan: {
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 15,
+  },
+  activeSubNote: {
+    fontFamily: 'Inter_400Regular',
+    color: '#FBBF24',
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  activeSubFeatures: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  activeSubFeaturesTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  activeSubFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  activeSubFeatureText: {
+    fontFamily: 'Inter_400Regular',
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 15,
+  },
+  cancelSubButton: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(239,68,68,0.5)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  cancelSubButtonText: {
+    fontFamily: 'Inter_600SemiBold',
+    color: '#EF4444',
+    fontSize: 15,
+  },
   planFrame: {
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.2)',
