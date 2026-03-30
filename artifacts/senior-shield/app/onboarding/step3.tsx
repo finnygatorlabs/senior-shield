@@ -75,9 +75,9 @@ export default function OnboardingStep3() {
 
       await userApi.updateProfile({ onboarding_completed: true }, user?.token);
 
-      router.replace("/onboarding/welcome-tour");
+      router.replace("/onboarding/fast-track");
     } catch (err) {
-      router.replace("/onboarding/welcome-tour");
+      router.replace("/onboarding/fast-track");
     } finally {
       setLoading(false);
     }
