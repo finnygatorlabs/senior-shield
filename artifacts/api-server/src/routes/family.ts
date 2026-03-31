@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { familyRelationshipsTable, usersTable, userTiersTable } from "@workspace/db";
 import { eq, or, and } from "drizzle-orm";
 import { requireAuth, AuthRequest } from "../lib/auth.js";
+import { sendFamilyMemberNotificationEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -113,14 +114,38 @@ router.post("/add-member", requireAuth, async (req: AuthRequest, res) => {
       }).where(eq(usersTable.id, adultChildId));
     }
 
-    await db.insert(familyRelationshipsTable).values({
+    const inserted = await db.insert(familyRelationshipsTable).values({
       senior_id: req.user!.userId,
       adult_child_id: adultChildId,
       relationship,
       scam_alerts: true,
       weekly_summary: true,
       email_alerts: true,
-    }).onConflictDoNothing();
+    }).onConflictDoNothing().returning();
+
+    if (inserted.length === 0) {
+      res.json({ success: true, message: `${adult_child_email} is already in your family alerts.` });
+      return;
+    }
+
+    const [senior] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
+    const seniorDisplayName = senior?.first_name
+      ? `${senior.first_name}${senior.last_name ? " " + senior.last_name : ""}`
+      : "Your loved one";
+
+    const [adultChildRecord] = await db.select().from(usersTable).where(eq(usersTable.id, adultChildId)).limit(1);
+    const recipientName = adultChildRecord?.first_name || firstName || null;
+
+    try {
+      await sendFamilyMemberNotificationEmail(
+        adult_child_email,
+        recipientName,
+        seniorDisplayName,
+        relationship,
+      );
+    } catch (emailErr) {
+      req.log.warn({ emailErr, recipientEmail: adult_child_email }, "Family notification email failed — member still added successfully");
+    }
 
     res.json({ success: true, message: `${adult_child_email} has been added to your family alerts.` });
   } catch (err) {
