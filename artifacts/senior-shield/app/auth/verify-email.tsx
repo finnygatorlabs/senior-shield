@@ -85,7 +85,7 @@ export default function VerifyEmailScreen() {
   }
 
   function continueAnyway() {
-    router.replace("/onboarding/step1");
+    router.replace("/onboarding/fast-track");
   }
 
   return (

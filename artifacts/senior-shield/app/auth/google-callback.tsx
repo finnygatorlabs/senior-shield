@@ -64,7 +64,7 @@ export default function GoogleCallbackScreen() {
           if (data.onboarding_completed) {
             router.replace("/(tabs)/home");
           } else {
-            router.replace("/onboarding/step1");
+            router.replace("/onboarding/fast-track");
           }
         }
       } catch (err: any) {
