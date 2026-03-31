@@ -7,13 +7,13 @@ export const DEFAULT_NAMES: Record<string, string> = { female: "Ida", male: "Cla
 export type FontSize = "normal" | "large" | "extra_large";
 export type ColorScheme = "light" | "dark";
 export type VoiceGender = "female" | "male";
-export type TtsVoice = "nova" | "shimmer" | "coral" | "echo" | "fable" | "onyx";
+export type TtsVoice = "nova" | "shimmer" | "sage" | "echo" | "fable" | "onyx";
 
 // All available voices with display names and descriptions
 export const TTS_VOICES: { value: TtsVoice; label: string; gender: VoiceGender; description: string }[] = [
   { value: "nova",    label: "Nova",    gender: "female", description: "Warm & friendly" },
   { value: "shimmer", label: "Shimmer", gender: "female", description: "Soft & gentle" },
-  { value: "coral",   label: "Coral",   gender: "female", description: "Calm & collected" },
+  { value: "sage",    label: "Sage",    gender: "female", description: "Calm & collected" },
   { value: "echo",    label: "Echo",    gender: "male",   description: "Energetic & upbeat" },
   { value: "fable",   label: "Fable",   gender: "male",   description: "Smooth & soulful" },
   { value: "onyx",    label: "Onyx",    gender: "male",   description: "Deep & authoritative" },
@@ -94,7 +94,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           captions_enabled: data.captions_enabled !== false,
           data_collection_enabled: data.data_collection_enabled !== false,
           assistant_name: (data.assistant_name === "Ava" ? "Ida" : data.assistant_name === "Max" ? "Clay" : data.assistant_name) || DEFAULT_NAMES[gender],
-          tts_voice: (data.tts_voice === "sage" ? "coral" : data.tts_voice === "ash" ? "fable" : data.tts_voice as TtsVoice) || (gender === "female" ? "nova" : "echo"),
+          tts_voice: (data.tts_voice === "coral" ? "sage" : data.tts_voice === "ash" ? "fable" : data.tts_voice as TtsVoice) || (gender === "female" ? "nova" : "echo"),
           daily_quotes_enabled: data.daily_quotes_enabled !== false,
         });
       }

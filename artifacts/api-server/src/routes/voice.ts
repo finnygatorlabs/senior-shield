@@ -482,11 +482,10 @@ const EDGE_VOICE_MAP: Record<string, string> = {
   shimmer: "en-US-JennyNeural",
   alloy: "en-US-AriaNeural",
   ash: "en-US-JennyNeural",
-  coral: "en-US-JennyNeural",
+  sage: "en-US-AriaNeural",
   onyx: "en-US-DavisNeural",
   echo: "en-US-GuyNeural",
   fable: "en-US-TonyNeural",
-  sage: "en-US-AriaNeural",
   verse: "en-US-TonyNeural",
 };
 
@@ -827,7 +826,7 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
             model: "tts-1-hd",
             input: processedText,
             voice: safeVoice,
-            speed: safeVoice === "coral" ? 0.80 : safeVoice === "fable" ? 0.88 : 0.92,
+            speed: safeVoice === "sage" ? 0.80 : safeVoice === "fable" ? 0.88 : 0.92,
           }),
         });
         if (ttsRes.ok) {
