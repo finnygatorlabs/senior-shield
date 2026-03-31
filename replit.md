@@ -19,7 +19,7 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 **Mobile Application (SeniorShield)**:
 - Developed with Expo (React Native) and Expo Router v6, targeting iOS with an Airbnb-inspired design.
 - UI/UX features a clean blue color scheme (`#2563EB`) and the Inter font.
-- Core screens include authentication, onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
+- Core screens include authentication (hero banner signup with seniors photo, no user type selection — all users are seniors), onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
 - Daily Reminders: Users can select or create custom reminders, which the AI assistant uses for personalized greetings.
 - Premium Soft-Gate System: Limits free-tier access to premium features (e.g., scam scans, number of family members) with clear upgrade paths and UI indicators.
 - Daily Quotes: The home screen displays an inspirational quote from a curated collection, which can be disabled by the user.

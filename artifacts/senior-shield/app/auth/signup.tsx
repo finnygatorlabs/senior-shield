@@ -10,6 +10,8 @@ import {
   Platform,
   StatusBar,
   Dimensions,
+  Image,
+  ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,45 +29,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 const { width } = Dimensions.get("window");
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
+const userType = "senior";
 
-function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: number; left?: number; right?: number; opacity: number }) {
-  return (
-    <View
-      style={{
-        position: "absolute",
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: 1.5,
-        borderColor: `rgba(255,255,255,${opacity})`,
-        top,
-        left,
-        right,
-      }}
-    />
-  );
-}
-
-function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top: number; left: number; rotate: string; opacity: number }) {
-  return (
-    <View
-      style={{
-        position: "absolute",
-        width: w,
-        height: 1,
-        backgroundColor: `rgba(255,255,255,${opacity})`,
-        top,
-        left,
-        transform: [{ rotate }],
-      }}
-    />
-  );
-}
-
-const USER_TYPES = [
-  { value: "senior", label: "Senior (65+)", icon: "person" as const, description: "I want tech help & scam protection" },
-  { value: "adult_child", label: "Family Member", icon: "people" as const, description: "I want to monitor a loved one" },
-];
+const heroBanner = require("@/assets/hero-banner.jpg");
+const shieldLogo = require("@/assets/seniorshield-logo-nobg.png");
 
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
@@ -135,8 +102,7 @@ export default function SignupScreen() {
   const { signup, loginWithGoogle, refreshUser } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState<"type" | "details">("type");
-  const [userType, setUserType] = useState("senior");
+  const [step, setStep] = useState<"welcome" | "details">("welcome");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -260,65 +226,43 @@ export default function SignupScreen() {
     }
   }
 
-  const selectedType = USER_TYPES.find(t => t.value === userType)!;
-
-  if (step === "type") {
+  if (step === "welcome") {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
         <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-        <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
-        <DecoCircle size={140} top={30} right={30} opacity={0.06} />
-        <DecoCircle size={300} top={-120} left={-150} opacity={0.06} />
-        <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
-        <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
 
         <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
           <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </Pressable>
-          <Text style={styles.headerTitle}>Create account</Text>
+          <Text style={styles.headerTitle}>Get Started</Text>
           <View style={{ width: 44 }} />
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.typeContent, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.welcomeContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.typeTopSection}>
-            <Text style={styles.typeHeading}>Who are you?</Text>
-            <Text style={styles.typeSubheading}>
-              This helps us personalise your experience
-            </Text>
-          </View>
-
-          <View style={styles.typeList}>
-            {USER_TYPES.map(type => {
-              const selected = userType === type.value;
-              return (
-                <Pressable
-                  key={type.value}
-                  onPress={() => {
-                    setUserType(type.value);
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.typeCard,
-                    selected && styles.typeCardSelected,
-                  ]}
-                >
-                  <View style={[styles.typeIconBg, selected && styles.typeIconBgSelected]}>
-                    <Ionicons name={type.icon} size={24} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.typeCardText}>
-                    <Text style={styles.typeCardLabel}>{type.label}</Text>
-                    <Text style={styles.typeCardDesc}>{type.description}</Text>
-                  </View>
-                  {selected && <Ionicons name="checkmark-circle" size={24} color="#34D399" />}
-                </Pressable>
-              );
-            })}
+          <View style={styles.heroBannerContainer}>
+            <ImageBackground
+              source={heroBanner}
+              style={styles.heroBannerImage}
+              imageStyle={styles.heroBannerImageStyle}
+              resizeMode="cover"
+            >
+              <LinearGradient
+                colors={["rgba(6,16,46,0.3)", "rgba(6,16,46,0.75)", "rgba(6,16,46,0.95)"]}
+                style={styles.heroBannerOverlay}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+              >
+                <Image source={shieldLogo} style={styles.heroLogo} resizeMode="contain" />
+                <Text style={styles.heroTitle}>Welcome to SeniorShield</Text>
+                <Text style={styles.heroSubtitle}>Please Sign In</Text>
+              </LinearGradient>
+            </ImageBackground>
           </View>
 
           <View style={styles.signInOptions}>
@@ -387,16 +331,12 @@ export default function SignupScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
-      <DecoCircle size={140} top={30} right={30} opacity={0.06} />
-      <DecoCircle size={180} top={400} left={-90} opacity={0.04} />
-      <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
 
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-        <Pressable onPress={() => setStep("type")} style={styles.backButton} hitSlop={12}>
+        <Pressable onPress={() => setStep("welcome")} style={styles.backButton} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Text style={styles.headerTitle}>Your details</Text>
+        <Text style={styles.headerTitle}>Create Your Account</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -406,14 +346,6 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.selectedTypeBadge}>
-          <Ionicons name={selectedType.icon} size={16} color="#FFFFFF" />
-          <Text style={styles.selectedTypeBadgeText}>{selectedType.label}</Text>
-          <Pressable onPress={() => setStep("type")} hitSlop={8}>
-            <Text style={styles.changeBadgeLink}>Change</Text>
-          </Pressable>
-        </View>
-
         <View style={styles.field}>
           <Text style={styles.label}>First Name</Text>
           <View style={styles.input}>
@@ -531,39 +463,46 @@ const styles = StyleSheet.create({
   backButton: { width: 44, height: 44, justifyContent: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   scroll: { flex: 1 },
-  typeContent: { paddingHorizontal: 24, paddingTop: 8, gap: 0 },
-  typeTopSection: { paddingTop: 8, paddingBottom: 24 },
-  typeHeading: { fontSize: 26, fontFamily: "Inter_700Bold", marginBottom: 8, color: "#FFFFFF" },
-  typeSubheading: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 22, color: "rgba(255,255,255,0.7)" },
-  typeList: { gap: 12, marginBottom: 28 },
-  typeCard: {
-    flexDirection: "row",
+  welcomeContent: { paddingHorizontal: 24, paddingTop: 0, gap: 0 },
+
+  heroBannerContainer: {
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 28,
+  },
+  heroBannerImage: {
+    width: "100%",
+    height: 240,
+  },
+  heroBannerImageStyle: {
+    borderRadius: 20,
+  },
+  heroBannerOverlay: {
+    flex: 1,
     alignItems: "center",
-    gap: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 18,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderColor: "rgba(255,255,255,0.15)",
+    justifyContent: "flex-end",
+    paddingBottom: 24,
+    paddingHorizontal: 20,
   },
-  typeCardSelected: {
-    backgroundColor: "rgba(52,211,153,0.15)",
-    borderColor: "rgba(52,211,153,0.5)",
+  heroLogo: {
+    width: 56,
+    height: 56,
+    marginBottom: 10,
   },
-  typeIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+  heroTitle: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 4,
   },
-  typeIconBgSelected: {
-    backgroundColor: "rgba(52,211,153,0.25)",
+  heroSubtitle: {
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.8)",
+    textAlign: "center",
   },
-  typeCardText: { flex: 1 },
-  typeCardLabel: { fontSize: 16, fontFamily: "Inter_600SemiBold", marginBottom: 2, color: "#FFFFFF" },
-  typeCardDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.6)" },
+
   signInOptions: { gap: 14 },
   socialButton: {
     flexDirection: "row",
@@ -594,27 +533,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  googleG: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#4285F4", lineHeight: 17 },
   socialButtonText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.15)" },
   dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
   content: { paddingHorizontal: 24, paddingTop: 16, gap: 18 },
-  selectedTypeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 24,
-    alignSelf: "flex-start",
-    marginBottom: 4,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  selectedTypeBadgeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
-  changeBadgeLink: { fontSize: 13, fontFamily: "Inter_500Medium", color: "#34D399", marginLeft: 4 },
   field: { gap: 8 },
   label: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   optional: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
