@@ -127,6 +127,7 @@ export default function FastTrackOnboarding() {
 
       if (nickname.trim() && user?.token) {
         await userApi.updateProfile({ first_name: nickname.trim() }, user.token).catch(() => {});
+        updateUser({ first_name: nickname.trim() });
       }
 
       if (selectedInterests.length > 0 && user?.token) {
