@@ -248,15 +248,15 @@ export default function SignupScreen() {
           <View style={styles.heroBannerWrap}>
             <Image source={heroBanner} style={styles.heroBannerImage} resizeMode="cover" />
             <LinearGradient
-              colors={["#06102E", "rgba(6,16,46,0.6)", "rgba(6,16,46,0.08)", "rgba(6,16,46,0.08)", "rgba(6,16,46,0.5)", "rgba(6,16,46,0.85)", "#06102E"]}
-              locations={[0, 0.08, 0.2, 0.45, 0.65, 0.82, 1]}
+              colors={["#06102E", "rgba(6,16,46,0)", "rgba(6,16,46,0)", "rgba(6,16,46,0.6)", "#06102E"]}
+              locations={[0, 0.06, 0.5, 0.8, 1]}
               style={styles.heroBannerFade}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
             />
             <LinearGradient
-              colors={["#06102E", "rgba(6,16,46,0.3)", "rgba(6,16,46,0.05)", "rgba(6,16,46,0.05)", "rgba(6,16,46,0.3)", "#06102E"]}
-              locations={[0, 0.06, 0.15, 0.85, 0.94, 1]}
+              colors={["#06102E", "rgba(6,16,46,0)", "rgba(6,16,46,0)", "#06102E"]}
+              locations={[0, 0.05, 0.95, 1]}
               style={styles.heroBannerFade}
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
