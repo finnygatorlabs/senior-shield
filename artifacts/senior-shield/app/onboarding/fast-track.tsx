@@ -163,7 +163,7 @@ export default function FastTrackOnboarding() {
       await userApi.updateProfile({ onboarding_step: 1 }, user.token).catch(() => {});
     }
     updateUser({ onboarding_step: 1 });
-    router.replace("/onboarding/health-awareness");
+    router.replace("/onboarding/health-awareness" as any);
   }
 
   function handleSkip() {
@@ -172,7 +172,7 @@ export default function FastTrackOnboarding() {
       userApi.updateProfile({ onboarding_step: 1 }, user.token).catch(() => {});
     }
     updateUser({ onboarding_step: 1 });
-    router.replace("/onboarding/health-awareness");
+    router.replace("/onboarding/health-awareness" as any);
   }
 
   if (isSubmitting) {

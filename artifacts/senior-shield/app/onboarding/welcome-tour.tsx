@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
+import { userApi } from "@/services/api";
 
 const { width, height } = Dimensions.get("window");
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
@@ -67,7 +68,7 @@ const SLIDES = [
 
 export default function WelcomeTour() {
   const insets = useSafeAreaInsets();
-  const { updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -91,7 +92,11 @@ export default function WelcomeTour() {
 
   function finish() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace("/onboarding/fast-track");
+    if (user?.token) {
+      userApi.updateProfile({ onboarding_completed: true }, user.token).catch(() => {});
+    }
+    updateUser({ onboarding_completed: true });
+    router.replace("/(tabs)/home");
   }
 
   const isLast = currentSlide === SLIDES.length - 1;

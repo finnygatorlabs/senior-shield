@@ -140,21 +140,21 @@ export default function HealthAwarenessOnboarding() {
           additional_notes: additionalNotes.trim() || null,
         }, user.token).catch(() => {});
 
-        await userApi.updateProfile({ onboarding_completed: true }, user.token).catch(() => {});
+        await userApi.updateProfile({ onboarding_step: 2 }, user.token).catch(() => {});
       }
     } catch {}
 
-    updateUser({ onboarding_completed: true });
-    router.replace("/(tabs)/home");
+    updateUser({ onboarding_step: 2 });
+    router.replace("/onboarding/welcome-tour" as any);
   }
 
   function handleSkip() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (user?.token) {
-      userApi.updateProfile({ onboarding_completed: true }, user.token).catch(() => {});
+      userApi.updateProfile({ onboarding_step: 2 }, user.token).catch(() => {});
     }
-    updateUser({ onboarding_completed: true });
-    router.replace("/(tabs)/home");
+    updateUser({ onboarding_step: 2 });
+    router.replace("/onboarding/welcome-tour" as any);
   }
 
   if (isSubmitting) {

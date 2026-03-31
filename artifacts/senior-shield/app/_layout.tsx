@@ -45,8 +45,9 @@ function RootLayoutNav() {
     }
 
     const getOnboardingRoute = () => {
+      if ((user?.onboarding_step ?? 0) >= 2) return "/onboarding/welcome-tour";
       if ((user?.onboarding_step ?? 0) >= 1) return "/onboarding/health-awareness";
-      return "/onboarding/welcome-tour";
+      return "/onboarding/fast-track";
     };
 
     if (!hasInitialRouted.current) {
