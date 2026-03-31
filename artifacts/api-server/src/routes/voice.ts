@@ -804,10 +804,19 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
     const safeVoice = VALID_VOICES.includes(voice || "") ? voice! : "nova";
     req.log.info({ voice: safeVoice }, "TTS request");
 
-    // Try OpenAI TTS first (best quality) if the key looks valid
+    function calmText(input: string): string {
+      let t = input;
+      t = t.replace(/!+/g, ".");
+      t = t.replace(/\.\./g, ".");
+      t = t.replace(/\.(\s)/g, ".$1");
+      t = t.replace(/([A-Z]{2,})/g, (match) => match.charAt(0) + match.slice(1).toLowerCase());
+      return t;
+    }
+
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey && openaiKey.startsWith("sk-")) {
       try {
+        const processedText = calmText(text.slice(0, 4096));
         const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
           method: "POST",
           headers: {
@@ -815,10 +824,10 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
             Authorization: `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: "tts-1",
-            input: text.slice(0, 4096),
+            model: "tts-1-hd",
+            input: processedText,
             voice: safeVoice,
-            speed: safeVoice === "coral" ? 0.85 : safeVoice === "fable" ? 0.9 : 0.95,
+            speed: safeVoice === "coral" ? 0.80 : safeVoice === "fable" ? 0.88 : 0.92,
           }),
         });
         if (ttsRes.ok) {
