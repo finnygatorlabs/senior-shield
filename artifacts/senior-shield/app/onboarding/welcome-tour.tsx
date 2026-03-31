@@ -19,7 +19,7 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { userApi } from "@/services/api";
 
-const shieldLogo = require("@/assets/seniorshield-logo.png");
+const shieldLogo = require("@/assets/seniorshield-logo-nobg.png");
 
 const { width, height } = Dimensions.get("window");
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];

@@ -16,6 +16,32 @@ function sanitizeExternalText(text: string): string {
     .slice(0, 2000);
 }
 
+async function fetchWithRetry(url: string, options: RequestInit & { signal?: AbortSignal } = {}, retries = 2, timeoutMs = 5000): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) return res;
+      if (attempt < retries) {
+        console.warn(`[fetchWithRetry] Attempt ${attempt + 1} failed (status ${res.status}) for ${url.substring(0, 80)}, retrying...`);
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (err: any) {
+      if (attempt < retries) {
+        console.warn(`[fetchWithRetry] Attempt ${attempt + 1} error for ${url.substring(0, 80)}: ${err.message}, retrying...`);
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("fetchWithRetry exhausted");
+}
+
 async function fetchRealTimeContext(userMessage: string, userLocation?: string): Promise<string> {
   const lower = userMessage.toLowerCase();
   let context = "";
@@ -62,7 +88,7 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     console.log(`[fetchRealTimeContext] Weather lookup: raw="${rawCity}" → query="${city}" forecast=${wantsForecast}`);
     if (wantsForecast) {
       fetches.push(
-        fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=imperial&cnt=40`, { signal: AbortSignal.timeout(5000) })
+        fetchWithRetry(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=imperial&cnt=40`, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
             if (data?.list && data.list.length > 0) {
@@ -82,26 +108,35 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
               context += `\n[5-DAY WEATHER FORECAST for ${data.city?.name || city}]:\n${forecast}`;
             } else {
               console.warn("[fetchRealTimeContext] Forecast API returned no data:", JSON.stringify(data).substring(0, 200));
+              context += `\n[WEATHER] The weather forecast service for "${city}" is temporarily unavailable. Tell the user you're having trouble reaching the weather service right now and to try again in a moment.`;
             }
           })
-          .catch((err) => { console.error("[fetchRealTimeContext] Forecast fetch error:", err.message); })
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Forecast fetch error after retries:", err.message);
+            context += `\n[WEATHER] The weather forecast service is temporarily unavailable due to a connection issue. Tell the user you're having trouble reaching the weather service right now and to try again in a moment. Do NOT tell them to use another app.`;
+          })
       );
     } else {
       fetches.push(
-        fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=imperial`, { signal: AbortSignal.timeout(5000) })
+        fetchWithRetry(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=imperial`, {}, 2, 6000)
           .then(r => r.json())
           .then((w: any) => {
             if (w?.main) {
               context += `\n[REAL-TIME WEATHER for ${w.name}]: Temperature: ${Math.round(w.main.temp)}°F (feels like ${Math.round(w.main.feels_like)}°F), ${w.weather?.[0]?.description || ""}, Humidity: ${w.main.humidity}%, Wind: ${Math.round(w.wind?.speed || 0)} mph.`;
             } else {
               console.warn("[fetchRealTimeContext] Weather API returned no data:", JSON.stringify(w).substring(0, 200));
+              context += `\n[WEATHER] The weather service for "${city}" returned no data. Tell the user you're having trouble getting weather information right now and to try again in a moment.`;
             }
           })
-          .catch((err) => { console.error("[fetchRealTimeContext] Weather fetch error:", err.message); })
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Weather fetch error after retries:", err.message);
+            context += `\n[WEATHER] The weather service is temporarily unavailable due to a connection issue. Tell the user you're having trouble reaching the weather service right now and to try again in a moment. Do NOT tell them to use another app.`;
+          })
       );
     }
   } else if (needsWeather && !WEATHER_API_KEY) {
     console.warn("[fetchRealTimeContext] Weather needed but WEATHER_API_KEY is empty");
+    context += `\n[WEATHER] The weather service is not configured. Tell the user the weather feature is being set up and to try again later.`;
   }
 
   if (needsSports) {
@@ -124,7 +159,7 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
       const url = `${endpoint}?dates=${dateParam}`;
       console.log(`[fetchRealTimeContext] Sports lookup (specific date): ${url}`);
       fetches.push(
-        fetch(url, { signal: AbortSignal.timeout(5000) })
+        fetchWithRetry(url, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
             const events = (data.events || []).slice(0, 8);
@@ -138,7 +173,10 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
                 }).join("\n");
             }
           })
-          .catch((err) => { console.error("[fetchRealTimeContext] Sports fetch error:", err.message); })
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Sports fetch error after retries:", err.message);
+            context += `\n[SPORTS] The sports scores service is temporarily unavailable. Tell the user you're having trouble reaching the sports service right now and to try again in a moment.`;
+          })
       );
     } else if (wantsPast) {
       const dates: string[] = [];
@@ -181,7 +219,7 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
       const url = endpoint;
       console.log(`[fetchRealTimeContext] Sports lookup (today): ${url}`);
       fetches.push(
-        fetch(url, { signal: AbortSignal.timeout(5000) })
+        fetchWithRetry(url, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
             const events = (data.events || []).slice(0, 8);
@@ -197,7 +235,10 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
               context += `\n[SPORTS] No games scheduled for today.`;
             }
           })
-          .catch((err) => { console.error("[fetchRealTimeContext] Sports fetch error:", err.message); })
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Sports fetch error after retries:", err.message);
+            context += `\n[SPORTS] The sports scores service is temporarily unavailable. Tell the user you're having trouble reaching the sports service right now and to try again in a moment.`;
+          })
       );
     }
   }
@@ -206,17 +247,24 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     const queryMatch = lower.match(/news\s+(?:about|on|regarding)\s+(.+)/i);
     const q = queryMatch ? queryMatch[1].trim() : "latest";
     fetches.push(
-      fetch(`https://newsdata.io/api/1/latest?apikey=${NEWS_API_KEY}&q=${encodeURIComponent(q)}&language=en&country=us`, { signal: AbortSignal.timeout(8000) })
+      fetchWithRetry(`https://newsdata.io/api/1/latest?apikey=${NEWS_API_KEY}&q=${encodeURIComponent(q)}&language=en&country=us`, {}, 2, 8000)
         .then(r => r.json())
         .then((data: any) => {
           const articles = (data.results || []).slice(0, 3);
           if (articles.length > 0) {
             context += `\n[REAL-TIME NEWS as of ${new Date().toLocaleDateString()}]:\n` +
               articles.map((a: any, i: number) => `${i + 1}. "${sanitizeExternalText(a.title || "")}" - ${sanitizeExternalText(a.source_id || "")} (${a.pubDate})`).join("\n");
+          } else {
+            context += `\n[NEWS] No news articles found for that topic right now. Tell the user you couldn't find any recent news on that topic.`;
           }
         })
-        .catch(() => {})
+        .catch((err) => {
+          console.error("[fetchRealTimeContext] News fetch error after retries:", err.message);
+          context += `\n[NEWS] The news service is temporarily unavailable. Tell the user you're having trouble reaching the news service right now and to try again in a moment.`;
+        })
     );
+  } else if (needsNews && !NEWS_API_KEY) {
+    context += `\n[NEWS] The news service is not configured. Tell the user the news feature is being set up and to try again later.`;
   }
 
   if (needsBible) {
@@ -225,12 +273,15 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     const ref = directRefMatch ? directRefMatch[0].trim() : (verseMatch ? verseMatch[1].trim() : "");
     if (ref) {
       fetches.push(
-        fetch(`https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`, { signal: AbortSignal.timeout(5000) })
+        fetchWithRetry(`https://bible-api.com/${encodeURIComponent(ref)}?translation=kjv`, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
             if (data?.text) context += `\n[BIBLE VERSE - ${sanitizeExternalText(data.reference || "")}]: "${sanitizeExternalText(data.text.trim())}"`;
           })
-          .catch(() => {})
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Bible fetch error after retries:", err.message);
+            context += `\n[BIBLE] The Bible verse service is temporarily unavailable. Tell the user you're having trouble looking that up right now and to try again in a moment.`;
+          })
       );
     }
   }
@@ -240,15 +291,17 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     if (topicMatch) {
       const topic = topicMatch[1].trim();
       fetches.push(
-        fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`, {
+        fetchWithRetry(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`, {
           headers: { "User-Agent": "SeniorShield/1.0 (admin@finnygator.com)" },
-          signal: AbortSignal.timeout(5000),
-        })
+        }, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
             if (data?.extract) context += `\n[WIKIPEDIA - ${sanitizeExternalText(data.title || "")}]: ${sanitizeExternalText(data.extract)}`;
           })
-          .catch(() => {})
+          .catch((err) => {
+            console.error("[fetchRealTimeContext] Wikipedia fetch error after retries:", err.message);
+            context += `\n[WIKIPEDIA] The information lookup service is temporarily unavailable. Tell the user you're having trouble looking that up right now and to try again in a moment.`;
+          })
       );
     }
   }
