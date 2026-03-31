@@ -230,13 +230,12 @@ export default function SignupScreen() {
         <StatusBar barStyle="light-content" />
         <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
 
-        <View style={styles.bgMesh1} />
-        <View style={styles.bgMesh2} />
-        <View style={styles.bgMesh3} />
-        <View style={styles.bgMesh4} />
-        <View style={styles.bgStreak1} />
-        <View style={styles.bgStreak2} />
-        <View style={styles.bgStreak3} />
+        <View style={styles.auroraWave1} />
+        <View style={styles.auroraWave2} />
+        <View style={styles.auroraWave3} />
+        <View style={styles.logoGlow} />
+        <View style={styles.arcLine1} />
+        <View style={styles.arcLine2} />
 
         <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
           <Pressable onPress={() => router.back()} style={styles.backButton} hitSlop={12}>
@@ -459,72 +458,66 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   welcomeContent: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
 
-  bgMesh1: {
+  auroraWave1: {
     position: "absolute" as const,
-    width: 400,
-    height: 400,
-    borderRadius: 200,
-    top: -100,
-    right: -80,
-    backgroundColor: "rgba(59,130,246,0.25)",
-    transform: [{ scaleX: 1.4 }],
-  },
-  bgMesh2: {
-    position: "absolute" as const,
-    width: 350,
+    width: width * 2,
     height: 350,
     borderRadius: 175,
-    top: -60,
-    left: -120,
-    backgroundColor: "rgba(249,115,22,0.18)",
-    transform: [{ scaleY: 1.3 }, { rotate: "25deg" }],
+    top: -180,
+    left: -width * 0.5,
+    backgroundColor: "rgba(59,130,246,0.2)",
+    transform: [{ rotate: "-6deg" }, { scaleY: 0.6 }],
   },
-  bgMesh3: {
+  auroraWave2: {
     position: "absolute" as const,
-    width: 300,
+    width: width * 2.2,
     height: 300,
     borderRadius: 150,
-    top: 280,
-    right: -40,
-    backgroundColor: "rgba(52,211,153,0.12)",
-    transform: [{ scaleX: 1.5 }],
+    top: -100,
+    left: -width * 0.6,
+    backgroundColor: "rgba(249,115,22,0.12)",
+    transform: [{ rotate: "4deg" }, { scaleY: 0.5 }],
   },
-  bgMesh4: {
+  auroraWave3: {
     position: "absolute" as const,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    bottom: 60,
-    left: -60,
-    backgroundColor: "rgba(99,102,241,0.15)",
-    transform: [{ scaleY: 1.2 }],
+    width: width * 1.8,
+    height: 250,
+    borderRadius: 125,
+    top: 50,
+    left: -width * 0.3,
+    backgroundColor: "rgba(52,211,153,0.08)",
+    transform: [{ rotate: "-3deg" }, { scaleY: 0.4 }],
   },
-  bgStreak1: {
+  logoGlow: {
     position: "absolute" as const,
-    width: width * 1.4,
-    height: 2,
-    top: 160,
-    left: -60,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    transform: [{ rotate: "-8deg" }],
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    top: 120,
+    left: width / 2 - 110,
+    backgroundColor: "rgba(249,115,22,0.1)",
   },
-  bgStreak2: {
+  arcLine1: {
     position: "absolute" as const,
-    width: width * 1.0,
-    height: 1.5,
-    top: 360,
-    right: -20,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    transform: [{ rotate: "5deg" }],
+    width: width * 1.6,
+    height: width * 1.6,
+    borderRadius: width * 0.8,
+    top: -width * 0.9,
+    left: -width * 0.3,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: "transparent",
   },
-  bgStreak3: {
+  arcLine2: {
     position: "absolute" as const,
-    width: width * 0.7,
-    height: 1.5,
-    top: 80,
-    left: 40,
-    backgroundColor: "rgba(249,115,22,0.15)",
-    transform: [{ rotate: "-3deg" }],
+    width: width * 1.2,
+    height: width * 1.2,
+    borderRadius: width * 0.6,
+    top: -width * 0.5,
+    left: -width * 0.1,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "transparent",
   },
 
   heroSection: {
