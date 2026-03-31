@@ -11,7 +11,6 @@ import {
   StatusBar,
   Dimensions,
   Image,
-  ImageBackground,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,7 +30,6 @@ const { width } = Dimensions.get("window");
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
 const userType = "senior";
 
-const heroBanner = require("@/assets/hero-banner.jpg");
 const shieldLogo = require("@/assets/seniorshield-logo-nobg.png");
 
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -245,27 +243,27 @@ export default function SignupScreen() {
           contentContainerStyle={[styles.welcomeContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.heroBannerWrap}>
-            <Image source={heroBanner} style={styles.heroBannerImage} resizeMode="cover" />
-            <LinearGradient
-              colors={["#06102E", "rgba(6,16,46,0)", "rgba(6,16,46,0)", "rgba(6,16,46,0.6)", "#06102E"]}
-              locations={[0, 0.06, 0.5, 0.8, 1]}
-              style={styles.heroBannerFade}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-            />
-            <LinearGradient
-              colors={["#06102E", "rgba(6,16,46,0)", "rgba(6,16,46,0)", "#06102E"]}
-              locations={[0, 0.05, 0.95, 1]}
-              style={styles.heroBannerFade}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-            />
-            <View style={styles.heroTextOverlay}>
-              <Image source={shieldLogo} style={styles.heroLogo} resizeMode="contain" />
-              <Text style={styles.heroTitle}>Welcome to SeniorShield</Text>
-              <Text style={styles.heroSubtitle}>Please Sign In</Text>
-            </View>
+          <View style={styles.heroSection}>
+            <View style={styles.glowOrb1} />
+            <View style={styles.glowOrb2} />
+            <View style={styles.glowOrb3} />
+
+            <View style={styles.ring1} />
+            <View style={styles.ring2} />
+            <View style={styles.ring3} />
+
+            <View style={styles.dot1} />
+            <View style={styles.dot2} />
+            <View style={styles.dot3} />
+            <View style={styles.dot4} />
+            <View style={styles.dot5} />
+
+            <View style={styles.floatLine1} />
+            <View style={styles.floatLine2} />
+
+            <Image source={shieldLogo} style={styles.heroLogo} resizeMode="contain" />
+            <Text style={styles.heroTitle}>Welcome to SeniorShield</Text>
+            <Text style={styles.heroSubtitle}>Please Sign In</Text>
           </View>
 
           <View style={styles.signInOptions}>
@@ -470,44 +468,157 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   welcomeContent: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
 
-  heroBannerWrap: {
-    width: "100%",
-    height: 300,
-    marginBottom: 8,
-  },
-  heroBannerImage: {
-    width: "100%",
-    height: "100%",
-    position: "absolute" as const,
-  },
-  heroBannerFade: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroTextOverlay: {
-    position: "absolute" as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
+  heroSection: {
     alignItems: "center" as const,
-    paddingBottom: 20,
+    paddingTop: 24,
+    paddingBottom: 36,
+    overflow: "hidden" as const,
   },
+
+  glowOrb1: {
+    position: "absolute" as const,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(37,99,235,0.15)",
+    top: -40,
+    right: -50,
+  },
+  glowOrb2: {
+    position: "absolute" as const,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(249,115,22,0.12)",
+    top: 20,
+    left: -40,
+  },
+  glowOrb3: {
+    position: "absolute" as const,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(52,211,153,0.08)",
+    bottom: 10,
+    right: 30,
+  },
+
+  ring1: {
+    position: "absolute" as const,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    top: -30,
+    left: width / 2 - 90,
+  },
+  ring2: {
+    position: "absolute" as const,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.04)",
+    top: -70,
+    left: width / 2 - 140,
+  },
+  ring3: {
+    position: "absolute" as const,
+    width: 380,
+    height: 380,
+    borderRadius: 190,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.025)",
+    top: -110,
+    left: width / 2 - 190,
+  },
+
+  dot1: {
+    position: "absolute" as const,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(249,115,22,0.5)",
+    top: 30,
+    right: 60,
+  },
+  dot2: {
+    position: "absolute" as const,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(52,211,153,0.4)",
+    top: 70,
+    left: 40,
+  },
+  dot3: {
+    position: "absolute" as const,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(37,99,235,0.35)",
+    top: 50,
+    right: 120,
+  },
+  dot4: {
+    position: "absolute" as const,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    bottom: 60,
+    left: 70,
+  },
+  dot5: {
+    position: "absolute" as const,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    bottom: 40,
+    right: 90,
+  },
+
+  floatLine1: {
+    position: "absolute" as const,
+    width: 60,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    top: 55,
+    left: 20,
+    transform: [{ rotate: "-25deg" }],
+  },
+  floatLine2: {
+    position: "absolute" as const,
+    width: 45,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    bottom: 50,
+    right: 30,
+    transform: [{ rotate: "15deg" }],
+  },
+
   heroLogo: {
     width: 73,
     height: 73,
-    marginBottom: 10,
+    marginBottom: 14,
+    zIndex: 2,
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 6,
+    zIndex: 2,
   },
   heroSubtitle: {
     fontSize: 16,
     fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.7)",
     textAlign: "center",
+    zIndex: 2,
   },
 
   signInOptions: { gap: 14, paddingHorizontal: 24 },
