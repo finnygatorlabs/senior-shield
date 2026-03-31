@@ -48,7 +48,7 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
   const fetches: Promise<void>[] = [];
 
   const needsWeather = /weather|temperature|forecast|rain|snow|sunny|cold|hot|humid/i.test(lower);
-  const needsSports = /score|who won|game last|game yesterday|game today|playoffs|championship|super bowl|world series|nba|nfl|mlb|nhl|standings|uconn|duke|march madness|ncaa|college basketball|college football|baseball|basketball|football|hockey|soccer/i.test(lower);
+  const needsSports = /score|who won|game last|game yesterday|game today|next game|upcoming game|playoffs|championship|super bowl|world series|nba|nfl|mlb|nhl|standings|uconn|duke|march madness|ncaa|college basketball|college football|baseball|basketball|football|hockey|soccer|hornets|hawks|lakers|celtics|warriors|cavaliers|knicks|nets|heat|bulls|mavericks|spurs|suns|clippers|nuggets|timberwolves|grizzlies|pelicans|thunder|blazers|kings|pacers|bucks|pistons|wizards|rockets|magic|raptors|76ers|sixers|falcons|panthers|saints|buccaneers|cowboys|eagles|giants|commanders|49ers|seahawks|rams|cardinals|bears|lions|packers|vikings|steelers|ravens|bengals|browns|chiefs|chargers|raiders|broncos|dolphins|patriots|jets|bills|texans|titans|jaguars|colts|braves|mets|yankees|dodgers|astros|phillies|padres|cubs|red sox|white sox|marlins|nationals|pirates|reds|brewers|cardinals|diamondbacks|rockies|twins|royals|rangers|blue jays|rays|orioles|guardians|tigers|mariners|angels|athletics|hurricanes|bruins|penguins|capitals|maple leafs|canadiens|rangers|islanders|panthers|lightning|predators|blues|blackhawks|avalanche|stars|wild|jets|flames|oilers|canucks|kraken|coyotes|senators|red wings|sabres|flyers|devils|blue jackets/i.test(lower);
   const needsNews = /news|headline|what.s happening|current event|latest/i.test(lower);
   const needsBible = /bible|verse|scripture|psalm|proverb|genesis|exodus|matthew|john|romans|corinthians|revelation/i.test(lower);
   const needsWikipedia = /who is|who was|what is|what are|tell me about|explain|define|history of|biography/i.test(lower) && !needsWeather && !needsNews && !needsSports;
@@ -56,9 +56,30 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
   console.log(`[fetchRealTimeContext] Query: "${userMessage.substring(0, 100)}" | weather=${needsWeather} sports=${needsSports} news=${needsNews} bible=${needsBible} wiki=${needsWikipedia} | WEATHER_KEY=${WEATHER_API_KEY ? "set" : "EMPTY"} NEWS_KEY=${NEWS_API_KEY ? "set" : "EMPTY"}`);
 
   if (needsWeather && WEATHER_API_KEY) {
-    const cityMatch = lower.match(/(?:weather|temperature|forecast|rain|snow|sunny|cold|hot|humid)\s+(?:in|for|at|near)\s+([a-zA-Z\s,]+)/i)
-      || lower.match(/(?:in|for|at|near)\s+([a-zA-Z\s,]+?)(?:\s*\?|$)/i);
-    let rawCity = cityMatch ? cityMatch[1].trim().replace(/,\s*$/, "") : (userLocation || "New York");
+    const cityPatterns = [
+      /(?:weather|temperature|forecast)\s+(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,.\-']{1,40}?)(?:\s+(?:today|tonight|tomorrow|this week|right now|currently|like|\?)|$)/i,
+      /(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,.\-']{1,40}?)\s+(?:weather|temperature|forecast)/i,
+      /(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,.\-']{1,40}?)\s+(?:what|how|today|tonight|tomorrow|this week|right now|currently)/i,
+    ];
+    let cityMatch: RegExpMatchArray | null = null;
+    for (const pattern of cityPatterns) {
+      const allMatches = [...lower.matchAll(new RegExp(pattern.source, "gi"))];
+      if (allMatches.length > 0) {
+        cityMatch = allMatches[allMatches.length - 1] as RegExpMatchArray;
+        break;
+      }
+    }
+    if (!cityMatch) {
+      const fallback = lower.match(/(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,]{1,40}?)(?:\s*[\?.]|$)/i);
+      if (fallback) {
+        const candidate = fallback[1].trim();
+        const FILLER = /^(going|interested|addition|looking|wanting|trying|thinking|planning|hoping|order|general|the house|a|an|the)\b/i;
+        if (!FILLER.test(candidate)) {
+          cityMatch = fallback;
+        }
+      }
+    }
+    let rawCity = cityMatch ? cityMatch[1].trim().replace(/,\s*$/, "").replace(/\s+(what|how|is|are|the|like|today|tonight|tomorrow|this|right|do|does|will|would|could|should|can).*$/i, "").trim() : (userLocation || "New York");
     if (rawCity.length > 50) rawCity = rawCity.substring(0, 50);
 
     const US_STATES: Record<string, string> = {
@@ -76,12 +97,17 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     if (parts.length >= 2) {
       const lastWord = parts[parts.length - 1].toLowerCase();
       const lastTwo = parts.length >= 3 ? (parts[parts.length - 2] + " " + parts[parts.length - 1]).toLowerCase() : "";
-      const stateAbbr = US_STATES[lastWord] || US_STATES[lastTwo];
+      const isTwoWordState = !!(lastTwo && US_STATES[lastTwo]);
+      const stateAbbr = (isTwoWordState ? US_STATES[lastTwo] : US_STATES[lastWord]) || "";
       if (stateAbbr) {
-        const cityName = stateAbbr === US_STATES[lastTwo]
+        const cityName = isTwoWordState
           ? parts.slice(0, -2).join(" ")
           : parts.slice(0, -1).join(" ");
-        city = `${cityName},${stateAbbr},US`;
+        if (cityName.length > 0) {
+          city = `${cityName},${stateAbbr},US`;
+        } else {
+          city = rawCity;
+        }
       }
     }
     const wantsForecast = /forecast|5.day|5 day|week ahead|next few days|coming days|this week|weekly weather/i.test(lower);
@@ -108,7 +134,8 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
               context += `\n[5-DAY WEATHER FORECAST for ${data.city?.name || city}]:\n${forecast}`;
             } else {
               console.warn("[fetchRealTimeContext] Forecast API returned no data:", JSON.stringify(data).substring(0, 200));
-              context += `\n[WEATHER] The weather forecast service for "${city}" is temporarily unavailable. Tell the user you're having trouble reaching the weather service right now and to try again in a moment.`;
+              context += `\n[WEATHER] Could not find forecast for "${city}". This may be a region name rather than a specific city. Ask the user for a specific city name (e.g., "Los Angeles" instead of "Southern California"). Say something like: "I wasn't able to find a forecast for that area — could you give me a specific city name?"`;
+
             }
           })
           .catch((err) => {
@@ -125,7 +152,7 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
               context += `\n[REAL-TIME WEATHER for ${w.name}]: Temperature: ${Math.round(w.main.temp)}°F (feels like ${Math.round(w.main.feels_like)}°F), ${w.weather?.[0]?.description || ""}, Humidity: ${w.main.humidity}%, Wind: ${Math.round(w.wind?.speed || 0)} mph.`;
             } else {
               console.warn("[fetchRealTimeContext] Weather API returned no data:", JSON.stringify(w).substring(0, 200));
-              context += `\n[WEATHER] The weather service for "${city}" returned no data. Tell the user you're having trouble getting weather information right now and to try again in a moment.`;
+              context += `\n[WEATHER] Could not find weather for "${city}". This may be a region name rather than a specific city. Ask the user for a specific city name (e.g., "Los Angeles" instead of "Southern California", or "Charlotte" instead of "North Carolina"). Say something like: "I wasn't able to find weather for that area — could you give me a specific city name so I can look it up?"`;
             }
           })
           .catch((err) => {
@@ -140,15 +167,53 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
   }
 
   if (needsSports) {
+    const NBA_TEAMS_ONLY = /hornets|hawks|lakers|celtics|warriors|cavaliers|knicks|nets|heat|bulls|mavericks|spurs|suns|clippers|nuggets|timberwolves|grizzlies|pelicans|thunder|blazers|kings|pacers|bucks|pistons|wizards|rockets|magic|raptors|76ers|sixers/i;
+    const NFL_TEAMS_ONLY = /falcons|saints|buccaneers|cowboys|eagles|commanders|49ers|seahawks|bears|lions|packers|vikings|steelers|ravens|bengals|browns|chiefs|chargers|raiders|broncos|dolphins|patriots|bills|texans|titans|jaguars|colts/i;
+    const MLB_TEAMS_ONLY = /braves|mets|yankees|dodgers|astros|phillies|padres|cubs|red sox|white sox|marlins|nationals|pirates|reds|brewers|diamondbacks|rockies|twins|royals|blue jays|rays|orioles|guardians|mariners|angels|athletics/i;
+    const NHL_TEAMS_ONLY = /hurricanes|bruins|penguins|capitals|maple leafs|canadiens|islanders|lightning|predators|blues|blackhawks|avalanche|wild|flames|oilers|canucks|kraken|coyotes|senators|red wings|sabres|flyers|devils|blue jackets/i;
+    const AMBIGUOUS_TEAMS: Record<string, string[]> = {
+      "panthers": ["NFL", "NHL"], "cardinals": ["NFL", "MLB"], "giants": ["NFL", "MLB"],
+      "jets": ["NFL", "NHL"], "rangers": ["MLB", "NHL"], "kings": ["NBA", "NHL"],
+      "stars": ["NHL"], "rams": ["NFL"],
+    };
+
+    const ambiguousMatch = lower.match(/\b(panthers|cardinals|giants|jets|rangers|kings|stars|rams)\b/i);
+    let resolvedLeague = "";
+    if (ambiguousMatch) {
+      const teamLower = ambiguousMatch[1].toLowerCase();
+      const leagues = AMBIGUOUS_TEAMS[teamLower] || [];
+      if (/nfl|football/i.test(lower)) resolvedLeague = "NFL";
+      else if (/nba|basketball/i.test(lower)) resolvedLeague = "NBA";
+      else if (/mlb|baseball/i.test(lower)) resolvedLeague = "MLB";
+      else if (/nhl|hockey/i.test(lower)) resolvedLeague = "NHL";
+      else resolvedLeague = leagues[0] || "NBA";
+    }
+
     let endpoint = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
-    if (/nfl|football/i.test(lower) && !/college/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
-    else if (/mlb|baseball/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard";
-    else if (/nhl|hockey/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard";
+    if (resolvedLeague === "NFL" || ((NFL_TEAMS_ONLY.test(lower) || /nfl/i.test(lower) || /football/i.test(lower)) && !/college/i.test(lower) && !ambiguousMatch)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+    else if (resolvedLeague === "MLB" || ((MLB_TEAMS_ONLY.test(lower) || /mlb|baseball/i.test(lower)) && !ambiguousMatch)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard";
+    else if (resolvedLeague === "NHL" || ((NHL_TEAMS_ONLY.test(lower) || /nhl|hockey/i.test(lower)) && !ambiguousMatch)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard";
     else if (/uconn|yukon|duke|march madness|ncaa|college basketball|mens.college/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard";
     else if (/college football/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard";
     else if (/soccer|mls/i.test(lower)) endpoint = "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard";
 
+    const allTeamNames = lower.match(/\b(hornets|hawks|lakers|celtics|warriors|cavaliers|knicks|nets|heat|bulls|mavericks|spurs|suns|clippers|nuggets|timberwolves|grizzlies|pelicans|thunder|blazers|kings|pacers|bucks|pistons|wizards|rockets|magic|raptors|76ers|sixers|falcons|panthers|saints|buccaneers|cowboys|eagles|giants|commanders|49ers|seahawks|rams|cardinals|bears|lions|packers|vikings|steelers|ravens|bengals|browns|chiefs|chargers|raiders|broncos|dolphins|patriots|jets|bills|texans|titans|jaguars|colts|braves|mets|yankees|dodgers|astros|phillies|padres|cubs|red sox|white sox|marlins|nationals|pirates|reds|brewers|diamondbacks|rockies|twins|royals|rangers|blue jays|rays|orioles|guardians|tigers|mariners|angels|athletics|hurricanes|bruins|penguins|capitals|maple leafs|canadiens|islanders|lightning|predators|blues|blackhawks|avalanche|stars|wild|flames|oilers|canucks|kraken|coyotes|senators|red wings|sabres|flyers|devils|blue jackets)\b/i);
+    const requestedTeam = allTeamNames ? allTeamNames[1].toLowerCase() : "";
+
+    function filterEventsForTeam(events: any[]): any[] {
+      if (!requestedTeam) return events;
+      return events.filter(e => {
+        const c = e.competitions?.[0];
+        const homeName = (c?.competitors?.[0]?.team?.displayName || "").toLowerCase();
+        const awayName = (c?.competitors?.[1]?.team?.displayName || "").toLowerCase();
+        const homeShort = (c?.competitors?.[0]?.team?.shortDisplayName || "").toLowerCase();
+        const awayShort = (c?.competitors?.[1]?.team?.shortDisplayName || "").toLowerCase();
+        return homeName.includes(requestedTeam) || awayName.includes(requestedTeam) || homeShort.includes(requestedTeam) || awayShort.includes(requestedTeam);
+      });
+    }
+
     const wantsPast = /yesterday|last night|last game|last evening|the other day|recently|saw a game|was a game|played|final score|who won/i.test(lower);
+    const wantsFuture = /next game|upcoming game|next match|when do|when does|when are|schedule|next week|next month|coming up/i.test(lower);
     const wantsSpecificDate = lower.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
 
     if (wantsSpecificDate) {
@@ -162,7 +227,9 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
         fetchWithRetry(url, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
-            const events = (data.events || []).slice(0, 8);
+            let events = filterEventsForTeam(data.events || []);
+            if (events.length === 0 && requestedTeam) events = (data.events || []).slice(0, 8);
+            else events = events.slice(0, 8);
             if (events.length > 0) {
               context += `\n[SPORTS SCORES for ${dateParam}]:\n` +
                 events.map((e: any, i: number) => {
@@ -195,11 +262,19 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
               .catch(() => ({ date: dateParam, events: [] }))
           )
         ).then(results => {
-          const allEvents: { date: string; event: any }[] = [];
+          let allEvents: { date: string; event: any }[] = [];
           for (const r of results) {
             for (const e of r.events) {
               allEvents.push({ date: r.date, event: e });
             }
+          }
+          if (requestedTeam) {
+            const filtered = allEvents.filter(item => {
+              const c = item.event.competitions?.[0];
+              const names = [(c?.competitors?.[0]?.team?.displayName||""),(c?.competitors?.[1]?.team?.displayName||""),(c?.competitors?.[0]?.team?.shortDisplayName||""),(c?.competitors?.[1]?.team?.shortDisplayName||"")].join(" ").toLowerCase();
+              return names.includes(requestedTeam);
+            });
+            if (filtered.length > 0) allEvents = filtered;
           }
           if (allEvents.length > 0) {
             context += `\n[RECENT SPORTS SCORES (last 3 days)]:\n` +
@@ -215,6 +290,52 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
           }
         })
       );
+    } else if (wantsFuture) {
+      const dates: string[] = [];
+      for (let i = 0; i <= 14; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        dates.push(d.toISOString().slice(0, 10).replace(/-/g, ""));
+      }
+      console.log(`[fetchRealTimeContext] Sports lookup (upcoming): checking next 14 days`);
+      fetches.push(
+        Promise.all(
+          dates.map(dateParam =>
+            fetch(`${endpoint}?dates=${dateParam}`, { signal: AbortSignal.timeout(5000) })
+              .then(r => r.json())
+              .then((data: any) => ({ date: dateParam, events: data.events || [] }))
+              .catch(() => ({ date: dateParam, events: [] }))
+          )
+        ).then(results => {
+          let allEvents: { date: string; event: any }[] = [];
+          for (const r of results) {
+            for (const e of r.events) {
+              allEvents.push({ date: r.date, event: e });
+            }
+          }
+          if (requestedTeam) {
+            const filtered = allEvents.filter(item => {
+              const c = item.event.competitions?.[0];
+              const names = [(c?.competitors?.[0]?.team?.displayName||""),(c?.competitors?.[1]?.team?.displayName||""),(c?.competitors?.[0]?.team?.shortDisplayName||""),(c?.competitors?.[1]?.team?.shortDisplayName||"")].join(" ").toLowerCase();
+              return names.includes(requestedTeam);
+            });
+            if (filtered.length > 0) allEvents = filtered;
+          }
+          if (allEvents.length > 0) {
+            context += `\n[UPCOMING GAMES (next 2 weeks)]:\n` +
+              allEvents.slice(0, 10).map((item, i) => {
+                const c = item.event.competitions?.[0];
+                const home = c?.competitors?.[0];
+                const away = c?.competitors?.[1];
+                const gameDate = `${item.date.slice(4,6)}/${item.date.slice(6,8)}`;
+                const gameTime = item.event.date ? new Date(item.event.date).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+                return `${i + 1}. (${gameDate} ${gameTime}) ${home?.team?.displayName || "?"} vs ${away?.team?.displayName || "?"} (${item.event.status?.type?.description || "Scheduled"})`;
+              }).join("\n");
+          } else {
+            context += `\n[SPORTS] No upcoming games found in the next 2 weeks.`;
+          }
+        })
+      );
     } else {
       const url = endpoint;
       console.log(`[fetchRealTimeContext] Sports lookup (today): ${url}`);
@@ -222,7 +343,9 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
         fetchWithRetry(url, {}, 2, 6000)
           .then(r => r.json())
           .then((data: any) => {
-            const events = (data.events || []).slice(0, 8);
+            let events = filterEventsForTeam(data.events || []);
+            if (events.length === 0 && requestedTeam) events = (data.events || []).slice(0, 8);
+            else events = events.slice(0, 8);
             if (events.length > 0) {
               context += `\n[TODAY'S SPORTS SCORES — ${new Date().toLocaleDateString()}]:\n` +
                 events.map((e: any, i: number) => {
