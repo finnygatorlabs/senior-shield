@@ -19,6 +19,7 @@ interface User {
   first_name?: string;
   last_name?: string;
   onboarding_completed: boolean;
+  onboarding_step?: number;
   email_verified?: boolean;
 }
 

@@ -160,19 +160,19 @@ export default function FastTrackOnboarding() {
     } catch {}
 
     if (user?.token) {
-      await userApi.updateProfile({ onboarding_completed: true }, user.token).catch(() => {});
+      await userApi.updateProfile({ onboarding_step: 1 }, user.token).catch(() => {});
     }
-    updateUser({ onboarding_completed: true });
-    router.replace("/(tabs)/home");
+    updateUser({ onboarding_step: 1 });
+    router.replace("/onboarding/health-awareness");
   }
 
   function handleSkip() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (user?.token) {
-      userApi.updateProfile({ onboarding_completed: true }, user.token).catch(() => {});
+      userApi.updateProfile({ onboarding_step: 1 }, user.token).catch(() => {});
     }
-    updateUser({ onboarding_completed: true });
-    router.replace("/(tabs)/home");
+    updateUser({ onboarding_step: 1 });
+    router.replace("/onboarding/health-awareness");
   }
 
   if (isSubmitting) {

@@ -415,4 +415,18 @@ export const hearingAidApi = {
   },
 };
 
+export const healthAwarenessApi = {
+  getProfile(token?: string) {
+    return request("/health-awareness/profile", { token });
+  },
+
+  saveProfile(data: Record<string, any>, token?: string) {
+    return request("/health-awareness/profile", { method: "PUT", body: data, token });
+  },
+
+  deleteProfile(token?: string) {
+    return request("/health-awareness/profile", { method: "DELETE", token });
+  },
+};
+
 export { API_BASE, getToken, request };

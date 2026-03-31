@@ -1,0 +1,173 @@
+Step 2: Integrate with Onboarding Flow
+
+In your App.tsx:
+
+TSX
+
+
+import { HealthAwarenessOnboarding } from './screens/SeniorShield-Health-Awareness-Onboarding';
+
+export default function App() {
+  const [onboardingStep, setOnboardingStep] = useState('fast-track'); // or 'health-awareness'
+
+  const handleFastTrackComplete = async (data) => {
+    // Save fast-track data
+    await saveFastTrackData(data);
+    // Move to health awareness
+    setOnboardingStep('health-awareness');
+  };
+
+  const handleHealthAwarenessComplete = async (healthData) => {
+    // Save health data
+    const response = await fetch('/api/health/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        ...healthData
+      })
+    });
+
+    // Move to chat
+    setOnboardingStep('chat');
+  };
+
+  const handleHealthAwarenessSkip = () => {
+    // Skip health awareness, go to chat
+    setOnboardingStep('chat');
+  };
+
+  if (onboardingStep === 'health-awareness') {
+    return (
+      <HealthAwarenessOnboarding
+        onComplete={handleHealthAwarenessComplete}
+        onSkip={handleHealthAwarenessSkip}
+        onBack={() => setOnboardingStep('fast-track')}
+      />
+    );
+  }
+
+  return <ChatScreen />;
+}
+
+
+
+Step 3: Integrate with AI Voice Endpoint
+
+In your voice.ts file:
+
+TypeScript
+
+
+import HealthAwarenessService from '../services/SeniorShield-Health-Awareness-Service';
+import AdaptationRulesEngine from '../services/SeniorShield-Adaptation-Rules-Engine';
+
+const healthService = new HealthAwarenessService(database);
+
+// In your /api/voice/process-request endpoint:
+export async function processVoiceRequest(userId: string, userMessage: string) {
+  // Get user's health context
+  const healthContext = await healthService.getHealthContextForPrompt(userId);
+  
+  // Get health data for adaptation rules
+  const healthProfile = await healthService.getHealthData(userId);
+  
+  // Build enhanced system prompt
+  let systemPrompt = `You are a helpful AI companion for seniors...`;
+  
+  if (healthContext) {
+    systemPrompt += `\n\n${healthContext}`;
+  }
+  
+  // Call OpenAI with enhanced prompt
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userMessage }]
+  });
+  
+  let aiResponse = response.choices[0].message.content;
+  
+  // Apply adaptation rules to response
+  if (healthProfile) {
+    const rules = AdaptationRulesEngine.getAdaptationRules(healthProfile.healthData);
+    const alternatives = AdaptationRulesEngine.getAlternativeSuggestions(
+      aiResponse,
+      healthProfile.healthData
+    );
+    
+    // If alternatives exist, enhance response
+    if (alternatives.length > 0) {
+      aiResponse = enhanceResponseWithAlternatives(aiResponse, alternatives);
+    }
+  }
+  
+  return aiResponse;
+}
+
+
+
+
+
+
+API Endpoints
+
+Save Health Data
+
+Plain Text
+
+
+POST /api/health/save
+
+Request:
+{
+  "userId": "user123",
+  "generalHealth": "managing",
+  "chronicConditions": ["Arthritis", "Diabetes"],
+  "mobilityLevel": "wheelchair",
+  "hearingVision": ["Vision challenges / Glasses needed"]
+}
+
+Response:
+{
+  "success": true,
+  "profile": { ... }
+}
+
+
+
+Get Health Data
+
+Plain Text
+
+
+GET /api/health/:userId
+
+Response:
+{
+  "success": true,
+  "healthData": {
+    "generalHealth": "managing",
+    "chronicConditions": ["Arthritis", "Diabetes"],
+    "mobilityLevel": "wheelchair",
+    "hearingVision": ["Vision challenges / Glasses needed"]
+  }
+}
+
+
+
+Get Health Context for AI
+
+Plain Text
+
+
+GET /api/health/context/:userId
+
+Response:
+{
+  "success": true,
+  "context": "## User Health & Accessibility Context\n\n**Health Summary:** General health: Managing challenges | Chronic conditions: Arthritis, Diabetes | Mobility: Wheelchair | Hearing/Vision: Vision challenges / Glasses needed\n\n**Adaptation Guidelines:**\n- When suggesting activities, mention accessible options and wheelchair-friendly alternatives\n- Ask about accessibility before suggesting outdoor activities\n..."
+}
+
+
+

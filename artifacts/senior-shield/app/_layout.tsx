@@ -44,12 +44,17 @@ function RootLayoutNav() {
       }
     }
 
+    const getOnboardingRoute = () => {
+      if ((user?.onboarding_step ?? 0) >= 1) return "/onboarding/health-awareness";
+      return "/onboarding/welcome-tour";
+    };
+
     if (!hasInitialRouted.current) {
       hasInitialRouted.current = true;
       if (!user) {
         router.replace("/auth/welcome");
       } else if (!user.onboarding_completed) {
-        router.replace("/onboarding/welcome-tour");
+        router.replace(getOnboardingRoute() as any);
       } else {
         router.replace("/(tabs)/home");
       }
@@ -59,7 +64,7 @@ function RootLayoutNav() {
     if (!user) {
       router.replace("/auth/welcome");
     } else if (!user.onboarding_completed) {
-      router.replace("/onboarding/welcome-tour");
+      router.replace(getOnboardingRoute() as any);
     } else {
       router.replace("/(tabs)/home");
     }

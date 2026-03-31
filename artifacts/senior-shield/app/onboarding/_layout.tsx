@@ -5,6 +5,7 @@ export default function OnboardingLayout() {
     <Stack screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
       <Stack.Screen name="fast-track" />
       <Stack.Screen name="welcome-tour" />
+      <Stack.Screen name="health-awareness" />
     </Stack>
   );
 }

@@ -471,3 +471,17 @@ export const featureUsageTable = pgTable("feature_usage", {
 }, (t) => [unique().on(t.user_id, t.feature)]);
 
 export type FeatureUsage = typeof featureUsageTable.$inferSelect;
+
+export const userHealthProfilesTable = pgTable("user_health_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull().unique(),
+  general_health: varchar("general_health"),
+  chronic_conditions: jsonb("chronic_conditions").$type<string[]>().default([]),
+  mobility_level: varchar("mobility_level"),
+  hearing_vision: jsonb("hearing_vision").$type<string[]>().default([]),
+  additional_notes: text("additional_notes"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export type UserHealthProfile = typeof userHealthProfilesTable.$inferSelect;

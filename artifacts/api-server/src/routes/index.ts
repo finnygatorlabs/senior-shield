@@ -18,6 +18,7 @@ import telecomRouter from "./telecom.js";
 import insuranceRouter from "./insurance.js";
 import facilitiesRouter from "./facilities.js";
 import remindersRouter from "./reminders.js";
+import healthAwarenessRouter from "./healthAwareness.js";
 
 import { authLimiter, scamLimiter, voiceLimiter } from "../lib/rateLimit.js";
 
@@ -42,5 +43,6 @@ router.use("/telecom", telecomRouter);
 router.use("/insurance", insuranceRouter);
 router.use("/facilities", facilitiesRouter);
 router.use("/reminders", remindersRouter);
+router.use("/health-awareness", healthAwarenessRouter);
 
 export default router;

@@ -71,6 +71,7 @@ router.post("/signup", async (req, res) => {
       first_name: newUser.first_name,
       last_name: newUser.last_name,
       onboarding_completed: newUser.onboarding_completed,
+      onboarding_step: newUser.onboarding_step,
       email_verified: false,
     });
   } catch (err) {
@@ -104,6 +105,7 @@ router.post("/login", async (req, res) => {
       first_name: user.first_name,
       last_name: user.last_name,
       onboarding_completed: user.onboarding_completed,
+      onboarding_step: user.onboarding_step,
       email_verified: user.email_verified,
     });
   } catch (err) {
@@ -235,6 +237,7 @@ router.post("/google", async (req, res) => {
         first_name: existing.first_name,
         last_name: existing.last_name,
         onboarding_completed: existing.onboarding_completed,
+        onboarding_step: existing.onboarding_step,
         email_verified: existing.email_verified,
         is_new_user: false,
       });
@@ -275,6 +278,7 @@ router.post("/google", async (req, res) => {
       first_name: newUser.first_name,
       last_name: newUser.last_name,
       onboarding_completed: newUser.onboarding_completed,
+      onboarding_step: newUser.onboarding_step,
       email_verified: true,
       is_new_user: true,
     });
