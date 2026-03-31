@@ -245,24 +245,27 @@ export default function SignupScreen() {
           contentContainerStyle={[styles.welcomeContent, { paddingBottom: insets.bottom + 32 }]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.heroBannerContainer}>
-            <ImageBackground
-              source={heroBanner}
-              style={styles.heroBannerImage}
-              imageStyle={styles.heroBannerImageStyle}
-              resizeMode="cover"
-            >
-              <LinearGradient
-                colors={["rgba(6,16,46,0.3)", "rgba(6,16,46,0.75)", "rgba(6,16,46,0.95)"]}
-                style={styles.heroBannerOverlay}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-              >
-                <Image source={shieldLogo} style={styles.heroLogo} resizeMode="contain" />
-                <Text style={styles.heroTitle}>Welcome to SeniorShield</Text>
-                <Text style={styles.heroSubtitle}>Please Sign In</Text>
-              </LinearGradient>
-            </ImageBackground>
+          <View style={styles.heroBannerWrap}>
+            <Image source={heroBanner} style={styles.heroBannerImage} resizeMode="cover" />
+            <LinearGradient
+              colors={["transparent", "rgba(6,16,46,0.4)", "rgba(6,16,46,0.85)", "#06102E"]}
+              locations={[0, 0.35, 0.7, 1]}
+              style={styles.heroBannerFade}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+            />
+            <LinearGradient
+              colors={["rgba(6,16,46,0.6)", "transparent", "transparent", "rgba(6,16,46,0.6)"]}
+              locations={[0, 0.15, 0.85, 1]}
+              style={styles.heroBannerFade}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+            />
+            <View style={styles.heroTextOverlay}>
+              <Image source={shieldLogo} style={styles.heroLogo} resizeMode="contain" />
+              <Text style={styles.heroTitle}>Welcome to SeniorShield</Text>
+              <Text style={styles.heroSubtitle}>Please Sign In</Text>
+            </View>
           </View>
 
           <View style={styles.signInOptions}>
@@ -313,8 +316,10 @@ export default function SignupScreen() {
             </Pressable>
           </View>
 
-          {!!info && <InlineInfo message={info} onDismiss={() => setInfo("")} />}
-          {!!error && <InlineError message={error} onDismiss={() => setError("")} />}
+          <View style={{ paddingHorizontal: 24 }}>
+            {!!info && <InlineInfo message={info} onDismiss={() => setInfo("")} />}
+            {!!error && <InlineError message={error} onDismiss={() => setError("")} />}
+          </View>
 
           <Pressable onPress={() => router.push("/auth/login")} style={styles.switchLink}>
             <Text style={styles.switchText}>
@@ -463,26 +468,28 @@ const styles = StyleSheet.create({
   backButton: { width: 44, height: 44, justifyContent: "center" },
   headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   scroll: { flex: 1 },
-  welcomeContent: { paddingHorizontal: 24, paddingTop: 0, gap: 0 },
+  welcomeContent: { paddingHorizontal: 0, paddingTop: 0, gap: 0 },
 
-  heroBannerContainer: {
-    borderRadius: 20,
-    overflow: "hidden",
-    marginBottom: 28,
+  heroBannerWrap: {
+    width: "100%",
+    height: 300,
+    marginBottom: 8,
   },
   heroBannerImage: {
     width: "100%",
-    height: 240,
+    height: "100%",
+    position: "absolute" as const,
   },
-  heroBannerImageStyle: {
-    borderRadius: 20,
+  heroBannerFade: {
+    ...StyleSheet.absoluteFillObject,
   },
-  heroBannerOverlay: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+  heroTextOverlay: {
+    position: "absolute" as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center" as const,
+    paddingBottom: 20,
   },
   heroLogo: {
     width: 56,
@@ -503,7 +510,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  signInOptions: { gap: 14 },
+  signInOptions: { gap: 14, paddingHorizontal: 24 },
   socialButton: {
     flexDirection: "row",
     alignItems: "center",
