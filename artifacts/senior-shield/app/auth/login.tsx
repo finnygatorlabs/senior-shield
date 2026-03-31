@@ -29,39 +29,6 @@ WebBrowser.maybeCompleteAuthSession();
 const { width } = Dimensions.get("window");
 const GRADIENT: [string, string, string] = ["#06102E", "#0E2D6B", "#0B5FAA"];
 
-function DecoCircle({ size, top, left, right, opacity }: { size: number; top?: number; left?: number; right?: number; opacity: number }) {
-  return (
-    <View
-      style={{
-        position: "absolute",
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: 1.5,
-        borderColor: `rgba(255,255,255,${opacity})`,
-        top,
-        left,
-        right,
-      }}
-    />
-  );
-}
-
-function DecoLine({ width: w, top, left, rotate, opacity }: { width: number; top: number; left: number; rotate: string; opacity: number }) {
-  return (
-    <View
-      style={{
-        position: "absolute",
-        width: w,
-        height: 1,
-        backgroundColor: `rgba(255,255,255,${opacity})`,
-        top,
-        left,
-        transform: [{ rotate }],
-      }}
-    />
-  );
-}
 
 function InlineError({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
@@ -265,12 +232,11 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <DecoCircle size={260} top={-80} right={-100} opacity={0.08} />
-      <DecoCircle size={140} top={30} right={30} opacity={0.06} />
-      <DecoCircle size={300} top={-120} left={-150} opacity={0.06} />
-      <DecoCircle size={180} top={400} left={-90} opacity={0.04} />
-      <DecoLine width={250} top={40} left={-60} rotate="-18deg" opacity={0.08} />
-      <DecoLine width={180} top={120} left={width - 100} rotate="22deg" opacity={0.06} />
+      <Image
+        source={require("@/assets/abstract-login-bg.png")}
+        style={styles.bgImage}
+        resizeMode="cover"
+      />
 
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <Pressable
@@ -425,6 +391,14 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  bgImage: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    width: "100%" as any,
+    height: "100%" as any,
+    opacity: 0.55,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
