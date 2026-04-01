@@ -826,7 +826,7 @@ router.post("/tts", requireAuth, async (req: AuthRequest, res) => {
             model: "tts-1-hd",
             input: processedText,
             voice: safeVoice,
-            speed: safeVoice === "sage" ? 0.80 : safeVoice === "fable" ? 0.88 : 0.92,
+            speed: safeVoice === "sage" ? 0.80 : safeVoice === "fable" ? 0.88 : 1.0,
           }),
         });
         if (ttsRes.ok) {
