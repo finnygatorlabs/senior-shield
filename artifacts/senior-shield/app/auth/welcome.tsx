@@ -57,8 +57,8 @@ const FEATURES = [
   { icon: "shield-checkmark" as const, text: "Real-time scam detection", desc: "Paste any message for instant risk analysis" },
   { icon: "people" as const, text: "Family alert system", desc: "Loved ones get notified of threats" },
   { icon: "warning" as const, text: "Emergency SOS", desc: "One-tap 911 and family alerts" },
-  { icon: "ear" as const, text: "Hearing aid support", desc: "Connect and manage hearing devices" },
-  { icon: "card" as const, text: "Secure billing", desc: "Simple subscription with Stripe" },
+  { icon: "medkit" as const, text: "Medication & Wellness Reminders", desc: "Stay on top of your health routine" },
+  { icon: "bulb" as const, text: "Adaptive Learning", desc: "Gets smarter the more you use it" },
 ];
 
 export default function WelcomeScreen() {
@@ -157,6 +157,7 @@ export default function WelcomeScreen() {
           >
             <Text style={styles.secondaryButtonText}>Sign In</Text>
           </Pressable>
+          <Text style={styles.freeNote}>Free version available  •  Premium includes additional family members</Text>
         </View>
       </ScrollView>
     </View>
@@ -284,6 +285,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 8,
+    flexWrap: "wrap",
   },
   primaryButton: {
     flex: 1,
@@ -314,5 +316,14 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+  freeNote: {
+    width: "100%",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.55)",
+    textAlign: "center",
+    marginTop: 6,
+    letterSpacing: 0.2,
   },
 });

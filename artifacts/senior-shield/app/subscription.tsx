@@ -289,7 +289,7 @@ export default function SubscriptionScreen() {
                 { icon: 'people', label: 'Family alert system' },
                 { icon: 'mic', label: '24/7 voice assistance' },
                 { icon: 'warning', label: 'Emergency SOS' },
-                { icon: 'ear', label: 'Hearing aid support' },
+                { icon: 'bulb', label: 'Adaptive Learning' },
               ].map((f, i) => (
                 <View key={i} style={styles.activeSubFeatureRow}>
                   <Ionicons name={f.icon as any} size={18} color="#34D399" />
@@ -326,6 +326,45 @@ export default function SubscriptionScreen() {
           <Text style={styles.subheadline}>
             Get scam detection, family alerts, and 24/7 voice assistance
           </Text>
+        </View>
+
+        <View style={styles.comparisonCard}>
+          <Text style={styles.comparisonTitle}>Free vs Premium</Text>
+          <View style={styles.comparisonHeader}>
+            <Text style={styles.comparisonFeatureLabel}>Feature</Text>
+            <Text style={styles.comparisonColLabel}>Free</Text>
+            <Text style={styles.comparisonColLabel}>Premium</Text>
+          </View>
+          {[
+            { feature: "Voice AI Assistant", free: true, premium: true },
+            { feature: "Scam Detection", free: "3/day", premium: "Unlimited" },
+            { feature: "Family Members", free: "1", premium: "5" },
+            { feature: "Family Scam Alerts", free: false, premium: true },
+            { feature: "Emergency SOS", free: true, premium: true },
+            { feature: "Adaptive Learning", free: true, premium: true },
+            { feature: "Wellness Reminders", free: "3", premium: "Unlimited" },
+            { feature: "Priority Support", free: false, premium: true },
+          ].map((row, i) => (
+            <View key={i} style={[styles.comparisonRow, i % 2 === 0 && styles.comparisonRowAlt]}>
+              <Text style={styles.comparisonFeature}>{row.feature}</Text>
+              <View style={styles.comparisonCell}>
+                {row.free === true ? (
+                  <Ionicons name="checkmark-circle" size={18} color="#34D399" />
+                ) : row.free === false ? (
+                  <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.25)" />
+                ) : (
+                  <Text style={styles.comparisonLimit}>{row.free}</Text>
+                )}
+              </View>
+              <View style={styles.comparisonCell}>
+                {row.premium === true ? (
+                  <Ionicons name="checkmark-circle" size={18} color="#34D399" />
+                ) : (
+                  <Text style={styles.comparisonPremiumValue}>{row.premium}</Text>
+                )}
+              </View>
+            </View>
+          ))}
         </View>
 
         <View style={styles.planFrame}>
@@ -626,6 +665,78 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
+  comparisonCard: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    padding: 16,
+    marginBottom: 24,
+  },
+  comparisonTitle: {
+    fontSize: 17,
+    fontFamily: 'Inter_700Bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  comparisonHeader: {
+    flexDirection: 'row',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 4,
+  },
+  comparisonFeatureLabel: {
+    flex: 1.5,
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  comparisonColLabel: {
+    flex: 0.7,
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  comparisonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+  },
+  comparisonRowAlt: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  comparisonFeature: {
+    flex: 1.5,
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: '#FFFFFF',
+  },
+  comparisonCell: {
+    flex: 0.7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  comparisonLimit: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    color: '#FBBF24',
+  },
+  comparisonPremiumValue: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#34D399',
+  },
   headlineSection: {
     marginBottom: 28,
   },
