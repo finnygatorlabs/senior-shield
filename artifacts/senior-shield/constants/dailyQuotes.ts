@@ -199,13 +199,61 @@ const DAILY_QUOTES: DailyQuote[] = [
   { text: "With age comes wisdom.", author: "Oscar Wilde" },
 ];
 
+const DAILY_FACTS: DailyQuote[] = [
+  { text: "Honey never spoils. Archaeologists have found 3,000 year old honey in Egyptian tombs that was still edible.", author: "Fact of the Day" },
+  { text: "Octopuses have three hearts and blue blood.", author: "Fact of the Day" },
+  { text: "A group of flamingos is called a flamboyance.", author: "Fact of the Day" },
+  { text: "The human nose can detect over 1 trillion different scents.", author: "Fact of the Day" },
+  { text: "Bananas are berries, but strawberries are not.", author: "Fact of the Day" },
+  { text: "The Eiffel Tower can grow up to 6 inches taller during summer due to heat expansion.", author: "Fact of the Day" },
+  { text: "A day on Venus is longer than a year on Venus.", author: "Fact of the Day" },
+  { text: "The heart of a shrimp is located in its head.", author: "Fact of the Day" },
+  { text: "Cows have best friends and get stressed when they are separated.", author: "Fact of the Day" },
+  { text: "The inventor of the Pringles can is buried in one.", author: "Fact of the Day" },
+  { text: "Alaska is the only state whose name is on one row of a keyboard.", author: "Fact of the Day" },
+  { text: "Sea otters hold hands while they sleep so they do not drift apart.", author: "Fact of the Day" },
+  { text: "There are more stars in the universe than grains of sand on all of Earth's beaches.", author: "Fact of the Day" },
+  { text: "The longest hiccuping spree lasted 68 years.", author: "Fact of the Day" },
+  { text: "A bolt of lightning is five times hotter than the surface of the sun.", author: "Fact of the Day" },
+  { text: "The average person walks about 100,000 miles in their lifetime.", author: "Fact of the Day" },
+  { text: "Dolphins sleep with one eye open.", author: "Fact of the Day" },
+  { text: "A hummingbird weighs less than a nickel.", author: "Fact of the Day" },
+  { text: "The Great Wall of China is not visible from space with the naked eye, but highways are.", author: "Fact of the Day" },
+  { text: "Your body contains about 60,000 miles of blood vessels.", author: "Fact of the Day" },
+  { text: "Elephants are the only animals that cannot jump.", author: "Fact of the Day" },
+  { text: "Scotland's national animal is the unicorn.", author: "Fact of the Day" },
+  { text: "There are more trees on Earth than stars in the Milky Way.", author: "Fact of the Day" },
+  { text: "A group of owls is called a parliament.", author: "Fact of the Day" },
+  { text: "The shortest war in history lasted 38 minutes, between Britain and Zanzibar.", author: "Fact of the Day" },
+  { text: "Butterflies taste with their feet.", author: "Fact of the Day" },
+  { text: "The average cloud weighs about 1.1 million pounds.", author: "Fact of the Day" },
+  { text: "Venus is the only planet that spins clockwise.", author: "Fact of the Day" },
+  { text: "A snail can sleep for three years.", author: "Fact of the Day" },
+  { text: "The longest place name in the world has 85 letters and is a hill in New Zealand.", author: "Fact of the Day" },
+  { text: "Wombat droppings are cube-shaped.", author: "Fact of the Day" },
+  { text: "You cannot hum while holding your nose closed.", author: "Fact of the Day" },
+  { text: "The total weight of all the ants on Earth is about the same as the weight of all the humans.", author: "Fact of the Day" },
+  { text: "A jiffy is an actual unit of time equal to one hundredth of a second.", author: "Fact of the Day" },
+  { text: "The moon has moonquakes, just like Earth has earthquakes.", author: "Fact of the Day" },
+  { text: "Apples float in water because they are 25 percent air.", author: "Fact of the Day" },
+  { text: "The first oranges were not orange in color. They were green.", author: "Fact of the Day" },
+  { text: "Sloths can hold their breath longer than dolphins can.", author: "Fact of the Day" },
+  { text: "There are more possible games of chess than atoms in the observable universe.", author: "Fact of the Day" },
+  { text: "Goldfish have a memory span of at least three months, not three seconds.", author: "Fact of the Day" },
+];
+
 export function getDailyQuote(): DailyQuote {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 0);
   const dayOfYear = Math.floor(
     (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
   );
-  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
+  const idx = dayOfYear - 1;
+  if (idx % 2 === 0) {
+    return DAILY_QUOTES[Math.floor(idx / 2) % DAILY_QUOTES.length];
+  } else {
+    return DAILY_FACTS[Math.floor(idx / 2) % DAILY_FACTS.length];
+  }
 }
 
 export default DAILY_QUOTES;

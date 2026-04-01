@@ -52,9 +52,16 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
   const needsNews = /news|headline|what.s happening|current event|latest/i.test(lower);
   const needsBible = /bible|verse|scripture|psalm|proverb|genesis|exodus|matthew|john|romans|corinthians|revelation/i.test(lower);
   const needsTime = /what time|current time|time in |time is it in|time zone|timezone|clock in|right now in/i.test(lower);
-  const needsWikipedia = /who is|who was|what is|what are|tell me about|explain|define|history of|biography/i.test(lower) && !needsWeather && !needsNews && !needsSports && !needsTime;
+  const needsDictionaryCheck = /define\s+\w|meaning of|what does .+ mean|dictionary|spell|scrabble|word definition/i.test(lower);
+  const needsWikipedia = /who is|who was|what is|what are|tell me about|explain|define|history of|biography/i.test(lower) && !needsWeather && !needsNews && !needsSports && !needsTime && !needsDictionaryCheck && !needsAirQuality;
+  const needsTrivia = /trivia|quiz|fun fact|random fact|did you know|test my knowledge|brain teaser/i.test(lower);
+  const needsJoke = /joke|funny|make me laugh|humor|tell me something funny/i.test(lower);
+  const needsDictionary = /define\s+\w|meaning of|what does .+ mean|dictionary|spell|scrabble|word definition/i.test(lower);
+  const needsBooks = /book|novel|author|reading list|recommend.+read|library|what should i read/i.test(lower) && !needsWikipedia;
+  const needsFood = /nutrition|calories|ingredient|food fact|is .+ healthy|what.s in|nutrient|diet info|food label/i.test(lower);
+  const needsAirQuality = /air quality|aqi|pollution|pollen|smog|air index/i.test(lower);
 
-  console.log(`[fetchRealTimeContext] Query: "${userMessage.substring(0, 100)}" | weather=${needsWeather} sports=${needsSports} news=${needsNews} bible=${needsBible} time=${needsTime} wiki=${needsWikipedia} | WEATHER_KEY=${WEATHER_API_KEY ? "set" : "EMPTY"} NEWS_KEY=${NEWS_API_KEY ? "set" : "EMPTY"}`);
+  console.log(`[fetchRealTimeContext] Query: "${userMessage.substring(0, 100)}" | weather=${needsWeather} sports=${needsSports} news=${needsNews} bible=${needsBible} time=${needsTime} wiki=${needsWikipedia} trivia=${needsTrivia} joke=${needsJoke} dict=${needsDictionary} books=${needsBooks} food=${needsFood} aqi=${needsAirQuality} | WEATHER_KEY=${WEATHER_API_KEY ? "set" : "EMPTY"} NEWS_KEY=${NEWS_API_KEY ? "set" : "EMPTY"}`);
 
   if (needsWeather && WEATHER_API_KEY) {
     const cityPatterns = [
@@ -548,6 +555,178 @@ async function fetchRealTimeContext(userMessage: string, userLocation?: string):
     }
   }
 
+  if (needsTrivia) {
+    fetches.push(
+      fetchWithRetry("https://opentdb.com/api.php?amount=3&type=multiple&difficulty=easy", {}, 1, 5000)
+        .then(r => r.json())
+        .then((data: any) => {
+          const results = data?.results || [];
+          if (results.length > 0) {
+            const triviaItems = results.map((q: any, i: number) => {
+              const decoded = (s: string) => s.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&eacute;/g, "e").replace(/&ntilde;/g, "n");
+              return `Question ${i + 1} (${sanitizeExternalText(decoded(q.category))}): ${sanitizeExternalText(decoded(q.question))} — Answer: ${sanitizeExternalText(decoded(q.correct_answer))}`;
+            }).join("\n");
+            context += `\n[TRIVIA QUESTIONS]:\n${triviaItems}\nPresent these as a fun quiz. Read the question, give the user a moment, then reveal the answer with encouragement.`;
+          }
+        })
+        .catch(() => {
+          context += `\n[TRIVIA] The trivia service is temporarily unavailable. Apologize and offer to try again in a moment.`;
+        })
+    );
+  }
+
+  if (needsJoke) {
+    fetches.push(
+      fetchWithRetry("https://v2.jokeapi.dev/joke/Pun,Misc?safe-mode&type=twopart", {}, 1, 5000)
+        .then(r => r.json())
+        .then((data: any) => {
+          if (data?.setup && data?.delivery) {
+            context += `\n[JOKE]: Setup: "${sanitizeExternalText(data.setup)}" Punchline: "${sanitizeExternalText(data.delivery)}"\nDeliver the joke naturally — say the setup, pause briefly, then deliver the punchline with warmth.`;
+          } else if (data?.joke) {
+            context += `\n[JOKE]: "${sanitizeExternalText(data.joke)}"\nDeliver the joke warmly and naturally.`;
+          }
+        })
+        .catch(() => {
+          context += `\n[JOKE] The joke service is temporarily unavailable. Make up a gentle, clean joke instead.`;
+        })
+    );
+  }
+
+  if (needsDictionary) {
+    const wordMatch = lower.match(/(?:define|meaning of|what does)\s+(?:the word\s+)?["']?(\w+)["']?/i)
+      || lower.match(/(?:spell|scrabble|dictionary)\s+(?:word\s+)?["']?(\w+)["']?/i);
+    const word = wordMatch ? wordMatch[1].trim() : "";
+    if (!word) {
+      context += `\n[DICTIONARY] Ask the user what word they would like defined. For example: "What word would you like me to look up?"`;
+    } else if (word) {
+      fetches.push(
+        fetchWithRetry(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`, {}, 1, 5000)
+          .then(r => r.json())
+          .then((data: any) => {
+            if (Array.isArray(data) && data.length > 0) {
+              const entry = data[0];
+              const meanings = (entry.meanings || []).slice(0, 2).map((m: any) => {
+                const defs = (m.definitions || []).slice(0, 2).map((d: any) => sanitizeExternalText(d.definition)).join("; ");
+                return `${m.partOfSpeech}: ${defs}`;
+              }).join("\n");
+              const phonetic = entry.phonetic || entry.phonetics?.[0]?.text || "";
+              context += `\n[DICTIONARY - "${sanitizeExternalText(entry.word)}"]:\nPronunciation: ${phonetic}\n${meanings}`;
+            } else {
+              context += `\n[DICTIONARY] Could not find a definition for "${word}". Ask the user to check the spelling.`;
+            }
+          })
+          .catch(() => {
+            context += `\n[DICTIONARY] The dictionary service is temporarily unavailable. Try again in a moment.`;
+          })
+      );
+    }
+  }
+
+  if (needsBooks) {
+    const bookMatch = lower.match(/(?:book|novel|author|reading|read)\s+(?:about|by|called|named|titled)?\s*(.+?)(?:\?|$)/i);
+    const query = bookMatch ? bookMatch[1].trim() : "bestseller";
+    fetches.push(
+      fetchWithRetry(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5&fields=title,author_name,first_publish_year,subject`, {}, 1, 6000)
+        .then(r => r.json())
+        .then((data: any) => {
+          const docs = (data?.docs || []).slice(0, 5);
+          if (docs.length > 0) {
+            const bookList = docs.map((b: any, i: number) => {
+              const authors = (b.author_name || []).join(", ") || "Unknown author";
+              const year = b.first_publish_year ? ` (${b.first_publish_year})` : "";
+              const subjects = (b.subject || []).slice(0, 3).join(", ");
+              return `${i + 1}. "${sanitizeExternalText(b.title)}" by ${sanitizeExternalText(authors)}${year}${subjects ? ` — Topics: ${sanitizeExternalText(subjects)}` : ""}`;
+            }).join("\n");
+            context += `\n[BOOK SEARCH for "${sanitizeExternalText(query)}"]:\n${bookList}\nPresent these as friendly reading suggestions.`;
+          } else {
+            context += `\n[BOOKS] No books found for that search. Ask the user for more details about what they are looking for.`;
+          }
+        })
+        .catch(() => {
+          context += `\n[BOOKS] The book search service is temporarily unavailable. Try again in a moment.`;
+        })
+    );
+  }
+
+  if (needsFood) {
+    const foodMatch = lower.match(/(?:nutrition|calories|ingredient|food fact|is|what.s in)\s+(?:in|of|about)?\s*(.+?)(?:\s+healthy|\?|$)/i);
+    const foodQuery = foodMatch ? foodMatch[1].trim().replace(/^(a|an|the)\s+/i, "") : "";
+    if (foodQuery) {
+      fetches.push(
+        fetchWithRetry(`https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(foodQuery)}&page_size=3&fields=product_name,nutriments,nutriscore_grade&countries_tags=en:united-states`, { headers: { "User-Agent": "SeniorShield/1.0 (admin@finnygator.com)" } }, 1, 6000)
+          .then(r => r.json())
+          .then((data: any) => {
+            const products = (data?.products || []).slice(0, 3);
+            if (products.length > 0) {
+              const foodInfo = products.map((p: any, i: number) => {
+                const n = p.nutriments || {};
+                const name = sanitizeExternalText(p.product_name || "Unknown");
+                const energy = n["energy-kcal_100g"] ? `${Math.round(n["energy-kcal_100g"])} kcal/100g` : "N/A";
+                const fat = n.fat_100g != null ? `${n.fat_100g}g fat` : "";
+                const sugar = n.sugars_100g != null ? `${n.sugars_100g}g sugar` : "";
+                const salt = n.salt_100g != null ? `${n.salt_100g}g salt` : "";
+                const nutri = [energy, fat, sugar, salt].filter(Boolean).join(", ");
+                const grade = p.nutriscore_grade ? ` Nutri-Score: ${p.nutriscore_grade.toUpperCase()}` : "";
+                return `${i + 1}. ${name}: ${nutri}${grade}`;
+              }).join("\n");
+              context += `\n[FOOD/NUTRITION for "${sanitizeExternalText(foodQuery)}"]:\n${foodInfo}\nPresent nutritional info in a friendly, easy-to-understand way. If relevant to their health considerations, mention that.`;
+            } else {
+              context += `\n[FOOD] No nutrition information found for "${foodQuery}". Ask the user to try a specific food name.`;
+            }
+          })
+          .catch(() => {
+            context += `\n[FOOD] The nutrition service is temporarily unavailable. Try again in a moment.`;
+          })
+      );
+    }
+  }
+
+  if (needsAirQuality) {
+    const aqiCityPatterns = [
+      /(?:air quality|aqi|pollution|pollen|smog|air index)\s+(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,.\-']{1,40}?)(?:\s*[\?.]|$)/i,
+      /(?:in|for|at|near)\s+([A-Za-z][A-Za-z\s,.\-']{1,40}?)\s+(?:air quality|aqi|pollution|pollen|smog|air index)/i,
+    ];
+    let aqiCity = "";
+    for (const pat of aqiCityPatterns) {
+      const m = lower.match(pat);
+      if (m) { aqiCity = m[1].trim(); break; }
+    }
+    if (!aqiCity) aqiCity = userLocation || "";
+    if (aqiCity) {
+      fetches.push(
+        fetchWithRetry(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(aqiCity)}&count=1`, {}, 1, 5000)
+          .then(r => r.json())
+          .then((geo: any) => {
+            const loc = geo?.results?.[0];
+            if (!loc) {
+              context += `\n[AIR QUALITY] Could not find location "${aqiCity}". Ask the user for a specific city name.`;
+              return;
+            }
+            return fetchWithRetry(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.latitude}&longitude=${loc.longitude}&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone`, {}, 1, 5000)
+              .then(r => r.json())
+              .then((aq: any) => {
+                const c = aq?.current;
+                if (c) {
+                  const aqi = c.us_aqi || 0;
+                  let level = "Good";
+                  if (aqi > 300) level = "Hazardous";
+                  else if (aqi > 200) level = "Very Unhealthy";
+                  else if (aqi > 150) level = "Unhealthy";
+                  else if (aqi > 100) level = "Unhealthy for Sensitive Groups";
+                  else if (aqi > 50) level = "Moderate";
+                  context += `\n[AIR QUALITY for ${sanitizeExternalText(loc.name)} (${loc.country || ""})]:\nUS AQI: ${aqi} (${level})\nPM2.5: ${c.pm2_5 ?? "N/A"} | PM10: ${c.pm10 ?? "N/A"} | Ozone: ${c.ozone ?? "N/A"}\nPresent this in a health-conscious way. If the AQI is above 100, recommend limiting outdoor activities, especially given health considerations.`;
+                }
+              });
+          })
+          .catch(() => {
+            context += `\n[AIR QUALITY] The air quality service is temporarily unavailable. Try again in a moment.`;
+          })
+      );
+    } else {
+      context += `\n[AIR QUALITY] I need a location to check air quality. Ask the user: "What city would you like me to check the air quality for?"`;
+    }
+  }
+
   await Promise.allSettled(fetches);
   if (context) {
     console.log(`[fetchRealTimeContext] Injecting ${context.length} chars of real-time context`);
@@ -856,6 +1035,9 @@ ONBOARDING: When a new user signs up, they go through a 3-step onboarding proces
 ACCOUNTS: Users can sign up with email and password or with Google. There are three account types: Senior (65+, the main user), Family Member (monitors a loved one), and Senior Center Staff (manages a program). After signing up, the user verifies their email address through a code sent to their inbox.
 
 NAVIGATION: The app has 5 tabs at the bottom of the screen: Home (house icon), Scam Check (shield icon), Family (people icon), History (time/clock icon), and Settings (gear icon). The user taps these tabs to switch between sections. The tab bar is dark navy blue.
+
+YOUR CAPABILITIES — you can help the user with all of these:
+You can look up the weather and air quality for any city. You can check sports scores and schedules. You can read today's news headlines. You can tell the user what time it is anywhere in the world. You can look up Bible verses. You can look up who someone is or what something is. You can tell jokes and make the user laugh. You can run trivia quizzes and brain teasers. You can define words and help with Scrabble. You can search for books and give reading recommendations. You can look up nutrition information for foods. You can check air quality and pollution levels. If the user asks for any of these, you have access to live data to answer them. Be proactive about mentioning these capabilities when relevant to the conversation.
 
 IMPORTANT SUPPORT INFORMATION:
 For any technical issues with the app, the user should contact support at admin@finnygator.com.

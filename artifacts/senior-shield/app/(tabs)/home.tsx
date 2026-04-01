@@ -1082,7 +1082,7 @@ export default function HomeScreen() {
         </Pressable>
       )}
 
-      {/* ── Daily Quote Banner ── */}
+      {/* ── Daily Quote / Fact of the Day Banner ── */}
       {prefs.daily_quotes_enabled && !quoteDismissed && (
         <Animated.View
           style={[
@@ -1093,13 +1093,20 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <View style={[styles.quoteAccentBox, { borderLeftColor: "rgba(96,165,250,0.6)" }]}>
-            <Text numberOfLines={2} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
+          <View style={[styles.quoteAccentBox, { borderLeftColor: dailyQuote.author === "Fact of the Day" ? "rgba(251,191,36,0.6)" : "rgba(96,165,250,0.6)" }]}>
+            {dailyQuote.author === "Fact of the Day" && (
+              <Text style={[styles.quoteAuthor, { color: "rgba(251,191,36,0.9)", fontSize: ts.sm, marginBottom: 4, fontWeight: "700" }]}>
+                Fact of the Day
+              </Text>
+            )}
+            <Text numberOfLines={3} style={[styles.quoteText, { color: theme.text, fontSize: ts.lg }]}>
               {dailyQuote.text}
             </Text>
-            <Text style={[styles.quoteAuthor, { color: theme.textSecondary, fontSize: ts.sm }]}>
-              — {dailyQuote.author}
-            </Text>
+            {dailyQuote.author !== "Fact of the Day" && (
+              <Text style={[styles.quoteAuthor, { color: theme.textSecondary, fontSize: ts.sm }]}>
+                — {dailyQuote.author}
+              </Text>
+            )}
           </View>
         </Animated.View>
       )}

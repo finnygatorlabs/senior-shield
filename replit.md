@@ -22,7 +22,7 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 - Core screens include authentication (hero banner signup with seniors photo, no user type selection — all users are seniors), onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
 - Daily Reminders: Users can select or create custom reminders, which the AI assistant uses for personalized greetings.
 - Premium Soft-Gate System: Limits free-tier access to premium features (e.g., scam scans, number of family members) with clear upgrade paths and UI indicators.
-- Daily Quotes: The home screen displays an inspirational quote from a curated collection, which can be disabled by the user.
+- Daily Quotes & Facts: The home screen alternates between inspirational quotes and "Fact of the Day" entries from curated collections. Facts display with a gold accent and label. Can be disabled by the user.
 - Authentication: Uses JWT tokens with `AsyncStorage`, `AuthContext`, and supports social sign-in (Google, Apple). Global session expiry detection is implemented.
 - Centralized API service (`services/api.ts`) with a custom event system for cross-cutting concerns.
 
@@ -33,7 +33,7 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 - Family Member Invitation Email: Notifies family members upon being added, explaining SeniorShield's purpose and expected notifications.
 - Family Scam Alerts: Sends branded email alerts to family members for medium or high-risk scam detections.
 - Scam Detection Engine: Features a 76-category framework, 600+ keywords, 250+ red flags, category-specific trigger scores, and 16 senior vulnerability multipliers. It employs a 5-layer analysis pipeline (Industry Category, Cross-Cutting Pattern, Link, Sender, Senior Vulnerability Analysis) with post-layer adjustments and a legitimate service whitelist.
-- Voice AI system: Dynamically injects user's active daily reminders into conversation context and is enriched with real-time data from external APIs (sports, weather, news, knowledge, bible verses) and user interests. AI assistant names are configurable (Ida/Clay). Weather city parsing uses multi-pattern regex extraction with US state abbreviation mapping and fallback handling — no database needed, OpenWeatherMap resolves city names. Sports detection uses regex matching for all major pro team names (NBA/NFL/MLB/NHL) with ambiguous name resolution (e.g., "panthers" defaults to NFL) — no team database needed, ESPN API returns league-wide scoreboard data which is filtered to the requested team. All real-time API calls use `fetchWithRetry()` with fallback context messages.
+- Voice AI system: Dynamically injects user's active daily reminders into conversation context and is enriched with real-time data from external APIs and user interests. AI assistant names are configurable (Ida/Clay). The system prompt emphasizes proactive engagement, health awareness acknowledgment, and interest integration. All real-time API calls use `fetchWithRetry()` with fallback context messages. Integrated APIs: OpenWeatherMap (weather), Open-Meteo (air quality/AQI), ESPN (sports), NewsData.io (news), TimeAPI.io (world time with JS Date fallback), Wikipedia (knowledge), Bible API (verses), Open Trivia DB (trivia/quizzes), JokeAPI (clean jokes), Free Dictionary API (word definitions/Scrabble), Open Library (book search), Open Food Facts (nutrition info).
 - Scam alert emails use Resend (requires RESEND_API_KEY). When email service is not configured, the alert endpoint returns a clear message instead of silently reporting "sent to 0".
 - Health Awareness System: Stores user health profiles (`user_health_profiles` table) and generates adaptation rules for personalized voice AI responses (e.g., slower speech, larger text). A 5-step onboarding flow collects this data.
 - Middleware: Includes rate limiting, standardized error handling, and 404 management.
@@ -76,3 +76,10 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 - **OpenWeatherMap**: Weather data.
 - **NewsData.io**: News articles.
 - **Wikipedia**: Knowledge base.
+- **TimeAPI.io**: World time lookups (with JS Date fallback).
+- **Open-Meteo**: Air quality index (AQI) data.
+- **Open Trivia DB**: Trivia questions for games.
+- **JokeAPI**: Clean, safe-mode jokes.
+- **Free Dictionary API**: Word definitions for Scrabble players.
+- **Open Library**: Book search and recommendations.
+- **Open Food Facts**: Nutrition information lookup.

@@ -54,6 +54,7 @@ const INTEREST_OPTIONS = [
   { label: "Faith", icon: "heart" as const },
   { label: "Crafts", icon: "color-palette" as const },
   { label: "News", icon: "newspaper" as const },
+  { label: "Games & Trivia", icon: "game-controller" as const },
 ];
 
 const RELATIONSHIPS = ["Son", "Daughter", "Grandchild", "Spouse", "Friend", "Caregiver", "Other"];
