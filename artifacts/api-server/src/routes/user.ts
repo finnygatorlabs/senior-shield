@@ -118,11 +118,17 @@ router.put("/preferences", requireAuth, async (req: AuthRequest, res) => {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
     }
 
-    const [updated] = await db
+    const result = await db
       .update(usersTable)
       .set(updates as any)
       .where(eq(usersTable.id, req.user!.userId))
       .returning();
+
+    const updated = result[0];
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
 
     res.json({
       preferred_voice: updated.preferred_voice,
