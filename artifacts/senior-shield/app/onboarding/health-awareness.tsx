@@ -91,7 +91,7 @@ export default function HealthAwarenessOnboarding() {
   const [chronicConditions, setChronicConditions] = useState<string[]>([]);
   const [mobilityLevel, setMobilityLevel] = useState("");
   const [hearingVision, setHearingVision] = useState<string[]>([]);
-  const [additionalNotes, setAdditionalNotes] = useState<string[]>(["", "", ""]);
+  const [additionalNotes, setAdditionalNotes] = useState<string[]>(["", "", "", "", "", ""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function goToStep(step: number) {
@@ -329,13 +329,16 @@ export default function HealthAwarenessOnboarding() {
               Other conditions not listed? (optional)
             </Text>
             {additionalNotes.map((note, idx) => (
-              <View key={idx} style={[styles.inputWrapper, { marginTop: idx === 0 ? 0 : 6 }]}>
-                <Ionicons name="add-circle-outline" size={16} color="rgba(255,255,255,0.35)" />
+              <View key={idx} style={[styles.inputWrapper, { marginTop: idx === 0 ? 0 : 4, paddingVertical: 4, minHeight: 0 }]}>
+                <Ionicons name="add-circle-outline" size={14} color="rgba(255,255,255,0.35)" />
                 <TextInput
-                  style={[styles.textInput, { fontSize: 14, paddingVertical: 8 }]}
+                  style={[styles.textInput, { fontSize: 13, paddingVertical: 4 }]}
                   placeholder={
                     idx === 0 ? "e.g. Parkinson's disease" :
                     idx === 1 ? "e.g. Thyroid condition" :
+                    idx === 2 ? "e.g. Stroke history" :
+                    idx === 3 ? "e.g. Sleep apnea" :
+                    idx === 4 ? "e.g. Neuropathy" :
                     "e.g. Other condition"
                   }
                   placeholderTextColor="rgba(255,255,255,0.25)"

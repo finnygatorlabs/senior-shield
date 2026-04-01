@@ -91,7 +91,7 @@ export default function WelcomeScreen() {
         ))}
       </View>
 
-      <View style={{ position: "absolute", top: insets.top + 8, right: 20, zIndex: 20 }}>
+      <View style={{ position: "absolute", top: insets.top + 23, right: 20, zIndex: 20 }}>
         <View style={styles.protectedBadge}>
           <Ionicons name="shield-checkmark" size={11} color="#34D399" />
           <Text style={styles.protectedText}>Protected</Text>
