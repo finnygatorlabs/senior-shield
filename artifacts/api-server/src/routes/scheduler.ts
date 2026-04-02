@@ -5,8 +5,7 @@ const router = Router();
 
 router.post("/reminders", async (req: Request, res: Response) => {
   try {
-    const schedulerSecret = req.headers["x-scheduler-secret"];
-    console.log(`[Scheduler Auth] Header present: ${!!schedulerSecret}, Env present: ${!!process.env.SCHEDULER_SECRET}, Match: ${schedulerSecret === process.env.SCHEDULER_SECRET}, Header value length: ${String(schedulerSecret || "").length}`);
+    const schedulerSecret = req.headers["x-scheduler-secret"] || req.query.secret;
     if (!process.env.SCHEDULER_SECRET || schedulerSecret !== process.env.SCHEDULER_SECRET) {
       res.status(401).json({ error: "Unauthorized" });
       return;
