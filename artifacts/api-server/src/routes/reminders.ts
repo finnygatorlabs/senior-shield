@@ -30,7 +30,7 @@ const PRESET_REMINDERS = [
   {
     key: "wellness_check",
     label: "Wellness Check",
-    prompt: "{name}, on a scale of 1 to 10, how are you feeling this morning?",
+    prompt: "Hi {name}, do you need to check any of the following: Blood Pressure, Insulin, Blood Glucose, Your Weight, or Other today?",
     icon: "heart-outline",
   },
   {

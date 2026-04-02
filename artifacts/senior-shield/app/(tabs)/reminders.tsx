@@ -404,13 +404,13 @@ export default function RemindersScreen() {
               ))}
             </View>
             <Text style={[styles.timeGridLabel, { color: theme.textSecondary, fontSize: ts.xs, marginTop: 8 }]}>Hour</Text>
-            <View style={styles.minuteRow}>
+            <View style={styles.hourGrid}>
               {HOURS.map((h) => (
                 <Pressable
                   key={h}
                   onPress={() => setSchedHour(h)}
                   style={[
-                    styles.timePill,
+                    styles.hourPill,
                     { backgroundColor: schedHour === h ? accent : "transparent", borderColor: schedHour === h ? accent : theme.cardBorder },
                   ]}
                 >
@@ -1094,6 +1094,19 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   timePillText: { fontFamily: "Inter_600SemiBold" },
+  hourGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  hourPill: {
+    width: 44,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   minuteRow: {
     flexDirection: "row",
     gap: 8,
