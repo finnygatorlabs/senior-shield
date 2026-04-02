@@ -123,6 +123,7 @@ export default function RemindersScreen() {
 
   const [scheduleReminder, setScheduleReminder] = useState<Reminder | null>(null);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const activeCount = myReminders.filter((r) => r.is_active).length;
 
@@ -510,6 +511,58 @@ export default function RemindersScreen() {
             </Text>
           </View>
         </View>
+
+        <Pressable
+          onPress={() => setShowHowItWorks(!showHowItWorks)}
+          style={[styles.howItWorksToggle, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}
+        >
+          <View style={[styles.howItWorksIcon, { backgroundColor: accent + "15" }]}>
+            <Ionicons name="information-circle" size={20} color={accent} />
+          </View>
+          <Text style={[styles.howItWorksToggleText, { color: accent, fontSize: ts.sm }]}>
+            How do reminders work?
+          </Text>
+          <Ionicons name={showHowItWorks ? "chevron-up" : "chevron-down"} size={18} color={accent} />
+        </Pressable>
+
+        {showHowItWorks && (
+          <View style={[styles.howItWorksCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
+            <View style={styles.howItWorksStep}>
+              <View style={[styles.stepNumber, { backgroundColor: accent + "18" }]}>
+                <Text style={[styles.stepNumberText, { color: accent, fontSize: ts.sm }]}>1</Text>
+              </View>
+              <Text style={[styles.stepText, { color: theme.text, fontSize: ts.sm }]}>
+                Pick a reminder from the list below, or create your own with the "Create Custom Reminder" button.
+              </Text>
+            </View>
+            <View style={styles.howItWorksStep}>
+              <View style={[styles.stepNumber, { backgroundColor: accent + "18" }]}>
+                <Text style={[styles.stepNumberText, { color: accent, fontSize: ts.sm }]}>2</Text>
+              </View>
+              <Text style={[styles.stepText, { color: theme.text, fontSize: ts.sm }]}>
+                Set the time you'd like to be reminded by tapping the clock button on your reminder card.
+              </Text>
+            </View>
+            <View style={styles.howItWorksStep}>
+              <View style={[styles.stepNumber, { backgroundColor: accent + "18" }]}>
+                <Text style={[styles.stepNumberText, { color: accent, fontSize: ts.sm }]}>3</Text>
+              </View>
+              <Text style={[styles.stepText, { color: theme.text, fontSize: ts.sm }]}>
+                Choose how often: every day, specific days of the week, or just one time.
+              </Text>
+            </View>
+            <View style={styles.howItWorksStep}>
+              <View style={[styles.stepNumber, { backgroundColor: "#34D39918" }]}>
+                <Text style={[styles.stepNumberText, { color: "#059669", fontSize: ts.sm }]}>
+                  <Ionicons name="checkmark" size={14} color="#059669" />
+                </Text>
+              </View>
+              <Text style={[styles.stepText, { color: theme.text, fontSize: ts.sm }]}>
+                Your AI assistant will check in with you at your scheduled time. You can have up to {MAX_ACTIVE} active reminders.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {authError && (
           <View style={[styles.authErrorBanner, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
@@ -1052,4 +1105,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayBtnText: { fontFamily: "Inter_600SemiBold" },
+
+  howItWorksToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  howItWorksIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  howItWorksToggleText: { fontFamily: "Inter_600SemiBold", flex: 1 },
+  howItWorksCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+    gap: 14,
+  },
+  howItWorksStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  stepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 1,
+  },
+  stepNumberText: { fontFamily: "Inter_700Bold" },
+  stepText: { fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 },
 });

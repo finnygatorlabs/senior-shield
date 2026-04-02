@@ -40,6 +40,10 @@ const FAQ = [
     answer: "Go to the Family tab and tap the + button. Enter your family member's email address and they will receive an invitation to join your SeniorShield network.",
   },
   {
+    question: "How do reminders work?",
+    answer: "Go to the Reminders tab to choose from preset reminders (medication, hydration, wellness, etc.) or create your own. For each reminder, you can set the exact time you want to be notified, choose how often (every day, specific days, or one time only), and pick which days of the week. Your AI assistant will check in with you at the scheduled time. You can have up to 3 active reminders at once.",
+  },
+  {
     question: "What is the Pro plan?",
     answer: "Pro gives you unlimited voice assistant questions, advanced scam detection, up to 10 family members, and priority support for just $4.99/month or $39.99/year.",
   },
