@@ -55,12 +55,20 @@ export default function GoogleCallbackScreen() {
         };
 
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        localStorage.setItem(AUTH_SIGNAL_KEY, JSON.stringify({ ...userData, ts: Date.now() }));
+        if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+          localStorage.setItem(AUTH_SIGNAL_KEY, JSON.stringify({ ...userData, ts: Date.now() }));
+        }
 
-        if (window.opener) {
+        if (Platform.OS === "web" && typeof window !== "undefined" && window.opener) {
           window.close();
-        } else {
+        } else if (Platform.OS === "web" && typeof window !== "undefined") {
           window.location.hash = "";
+          if (data.onboarding_completed) {
+            router.replace("/(tabs)/home");
+          } else {
+            router.replace("/onboarding/welcome-tour");
+          }
+        } else {
           if (data.onboarding_completed) {
             router.replace("/(tabs)/home");
           } else {

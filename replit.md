@@ -24,6 +24,8 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 - Premium Soft-Gate System: Limits free-tier access to premium features (e.g., scam scans, number of family members) with clear upgrade paths and UI indicators.
 - Daily Quotes & Facts: The home screen alternates between inspirational quotes and "Fact of the Day" entries from curated collections. Facts display with a gold accent and label. Can be disabled by the user.
 - Authentication: Uses JWT tokens with `AsyncStorage`, `AuthContext`, and supports social sign-in (Google, Apple). Global session expiry detection is implemented.
+- Google Auth: Uses `expo-auth-session/providers/google` with fallback IDs to prevent crashes when native client IDs aren't configured. Platform-specific: `EXPO_PUBLIC_GOOGLE_CLIENT_ID` (web), `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` (iOS), `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` (Android). Button gracefully disables with user-facing message when IDs are missing.
+- Platform Safety: All `window.*`, `document.*`, and `localStorage` usage is guarded by `Platform.OS === "web"` checks. Native-only features (Haptics, Linking) are guarded by `Platform.OS !== "web"`. `Alert.alert` is used on native; web uses inline error/info components.
 - Centralized API service (`services/api.ts`) with a custom event system for cross-cutting concerns.
 
 **Backend API (api-server)**:

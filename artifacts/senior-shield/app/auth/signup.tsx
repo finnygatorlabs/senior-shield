@@ -111,9 +111,17 @@ export default function SignupScreen() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  const FALLBACK_ID = "not-configured";
+  const isGoogleConfigured = Platform.select({
+    ios: !!process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    android: !!process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    default: !!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  });
+
   const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || FALLBACK_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || FALLBACK_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || FALLBACK_ID,
     redirectUri: makeRedirectUri({
       scheme: "senior-shield",
       path: "auth/google-callback",
@@ -138,6 +146,10 @@ export default function SignupScreen() {
 
   function handleGoogleSignIn() {
     setError("");
+    if (!isGoogleConfigured) {
+      setInfo("Google sign-in will be available once the app is published. Please use Email for now.");
+      return;
+    }
     if (Platform.OS === "web") {
       setSocialLoading(true);
       const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -257,7 +269,7 @@ export default function SignupScreen() {
 
           <View style={styles.signInOptions}>
             <Pressable
-              style={[styles.socialButton, styles.googleBtn, socialLoading && styles.disabled]}
+              style={[styles.socialButton, styles.googleBtn, (socialLoading || !isGoogleConfigured) && styles.disabled]}
               onPress={handleGoogleSignIn}
               disabled={socialLoading}
             >
