@@ -52,6 +52,12 @@ const PRESET_REMINDERS = [
     icon: "calendar-outline",
   },
   {
+    key: "prayer_meditation",
+    label: "Prayer or Meditation",
+    prompt: "Hi {name}, want to set aside some time to pray or meditate today?",
+    icon: "leaf-outline",
+  },
+  {
     key: "gratitude",
     label: "Gratitude Moment",
     prompt: "{name}, what's one thing you're grateful for today?",

@@ -53,6 +53,7 @@ const FALLBACK_PRESETS: Preset[] = [
   { key: "hydration", label: "Hydration Reminder", prompt: "{name}, have you had enough water today? Staying hydrated is so important.", icon: "water-outline" },
   { key: "meals", label: "Meal Reminder", prompt: "{name}, have you eaten today? A good meal will help keep your energy up.", icon: "restaurant-outline" },
   { key: "appointments", label: "Appointment Check", prompt: "{name}, do you have any appointments today? Let me help you stay on track.", icon: "calendar-outline" },
+  { key: "prayer_meditation", label: "Prayer or Meditation", prompt: "Hi {name}, want to set aside some time to pray or meditate today?", icon: "leaf-outline" },
   { key: "gratitude", label: "Gratitude Moment", prompt: "{name}, what's one thing you're grateful for today?", icon: "sunny-outline" },
 ];
 
@@ -754,7 +755,7 @@ export default function RemindersScreen() {
                 style={[styles.modalInput, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
                 value={customLabel}
                 onChangeText={setCustomLabel}
-                placeholder="e.g., Evening Prayer"
+                placeholder="e.g., Daily Journal"
                 placeholderTextColor={theme.placeholder}
                 maxLength={50}
               />
@@ -766,7 +767,7 @@ export default function RemindersScreen() {
                 style={[styles.modalTextArea, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
                 value={customPrompt}
                 onChangeText={setCustomPrompt}
-                placeholder="e.g., Have you said your evening prayer today?"
+                placeholder="e.g., Have you written in your journal today?"
                 placeholderTextColor={theme.placeholder}
                 multiline
                 numberOfLines={3}
