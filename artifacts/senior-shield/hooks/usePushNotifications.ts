@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Platform } from "react-native";
 import {
+  initNotificationHandler,
   registerForPushNotifications,
   setupNotificationListeners,
 } from "../services/notifications";
@@ -15,8 +16,12 @@ export function usePushNotifications(userId: string | null) {
     if (!userId || initialized.current) return;
     initialized.current = true;
 
+    let cleanupListeners: (() => void) | null = null;
+
     const setup = async () => {
       try {
+        await initNotificationHandler();
+
         const { deviceToken, expoPushToken } =
           await registerForPushNotifications();
 
@@ -31,6 +36,8 @@ export function usePushNotifications(userId: string | null) {
             deviceName: Platform.OS === "ios" ? "iPhone" : "Android",
           });
         }
+
+        cleanupListeners = await setupNotificationListeners();
       } catch (error) {
         console.error("[usePushNotifications] Error:", error);
       }
@@ -38,8 +45,9 @@ export function usePushNotifications(userId: string | null) {
 
     setup();
 
-    const cleanup = setupNotificationListeners();
-    return cleanup;
+    return () => {
+      cleanupListeners?.();
+    };
   }, [userId]);
 
   return { pushToken, permissionGranted };
