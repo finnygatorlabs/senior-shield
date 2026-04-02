@@ -80,11 +80,40 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
 
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { reminder_key, label, prompt, icon, is_custom, metadata } = req.body;
+    const { reminder_key, label, prompt, icon, is_custom, metadata, scheduled_time, frequency, days_of_week } = req.body;
 
     if (!reminder_key || !label || !prompt) {
       res.status(400).json({ error: "Bad Request", message: "reminder_key, label, and prompt are required" });
       return;
+    }
+
+    if (scheduled_time) {
+      if (!/^\d{2}:\d{2}$/.test(scheduled_time)) {
+        res.status(400).json({ error: "Bad Request", message: "scheduled_time must be in HH:MM format" });
+        return;
+      }
+      const [hh, mm] = scheduled_time.split(":").map(Number);
+      if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+        res.status(400).json({ error: "Bad Request", message: "scheduled_time must have valid hours (00-23) and minutes (00-59)" });
+        return;
+      }
+    }
+
+    if (frequency && !["daily", "weekly", "once"].includes(frequency)) {
+      res.status(400).json({ error: "Bad Request", message: "frequency must be daily, weekly, or once" });
+      return;
+    }
+
+    if (frequency === "weekly") {
+      if (!days_of_week || !days_of_week.trim()) {
+        res.status(400).json({ error: "Bad Request", message: "days_of_week is required for weekly frequency" });
+        return;
+      }
+      const dayNums = days_of_week.split(",").map(Number);
+      if (dayNums.some((d: number) => isNaN(d) || d < 0 || d > 6)) {
+        res.status(400).json({ error: "Bad Request", message: "days_of_week must contain values 0-6" });
+        return;
+      }
     }
 
     const existing = await db
@@ -117,16 +146,88 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
         is_active: true,
         sort_order: existing.length,
         metadata: metadata || null,
+        scheduled_time: scheduled_time || null,
+        frequency: frequency || "daily",
+        days_of_week: days_of_week || null,
       })
       .onConflictDoUpdate({
         target: [dailyRemindersTable.user_id, dailyRemindersTable.reminder_key],
-        set: { is_active: true, label, prompt, icon, metadata: metadata || null, updated_at: new Date() },
+        set: {
+          is_active: true, label, prompt, icon,
+          metadata: metadata || null,
+          scheduled_time: scheduled_time || null,
+          frequency: frequency || "daily",
+          days_of_week: days_of_week || null,
+          updated_at: new Date(),
+        },
       })
       .returning();
 
     res.json({ reminder });
   } catch (err) {
     req.log.error({ err }, "Create reminder error");
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.put("/:id/schedule", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { scheduled_time, frequency, days_of_week } = req.body;
+
+    if (scheduled_time) {
+      if (!/^\d{2}:\d{2}$/.test(scheduled_time)) {
+        res.status(400).json({ error: "Bad Request", message: "scheduled_time must be in HH:MM format" });
+        return;
+      }
+      const [hh, mm] = scheduled_time.split(":").map(Number);
+      if (hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+        res.status(400).json({ error: "Bad Request", message: "scheduled_time must have valid hours (00-23) and minutes (00-59)" });
+        return;
+      }
+    }
+
+    if (frequency && !["daily", "weekly", "once"].includes(frequency)) {
+      res.status(400).json({ error: "Bad Request", message: "frequency must be daily, weekly, or once" });
+      return;
+    }
+
+    if (frequency === "weekly") {
+      if (!days_of_week || !days_of_week.trim()) {
+        res.status(400).json({ error: "Bad Request", message: "days_of_week is required for weekly frequency" });
+        return;
+      }
+      const dayNums = days_of_week.split(",").map(Number);
+      if (dayNums.some((d: number) => isNaN(d) || d < 0 || d > 6)) {
+        res.status(400).json({ error: "Bad Request", message: "days_of_week must contain values 0-6" });
+        return;
+      }
+    }
+
+    const [updated] = await db
+      .update(dailyRemindersTable)
+      .set({
+        scheduled_time: scheduled_time || null,
+        frequency: frequency || "daily",
+        days_of_week: days_of_week || null,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(dailyRemindersTable.id, id),
+          eq(dailyRemindersTable.user_id, req.user!.userId)
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Not Found" });
+      return;
+    }
+
+    res.json({ reminder: updated });
+  } catch (err) {
+    req.log.error({ err }, "Update reminder schedule error");
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

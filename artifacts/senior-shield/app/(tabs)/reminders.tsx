@@ -9,9 +9,7 @@ import {
   TextInput,
   Modal,
   Switch,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  KeyboardAvoidingView,
+  Pressable,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +38,9 @@ interface Reminder {
   icon: string;
   is_active: boolean;
   is_custom: boolean;
+  scheduled_time?: string | null;
+  frequency?: string | null;
+  days_of_week?: string | null;
 }
 
 const MAX_ACTIVE = 3;
@@ -54,6 +55,47 @@ const FALLBACK_PRESETS: Preset[] = [
   { key: "appointments", label: "Appointment Check", prompt: "{name}, do you have any appointments today? Let me help you stay on track.", icon: "calendar-outline" },
   { key: "gratitude", label: "Gratitude Moment", prompt: "{name}, what's one thing you're grateful for today?", icon: "sunny-outline" },
 ];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = [0, 15, 30, 45];
+const DAYS = [
+  { id: 0, short: "Sun", label: "Sunday" },
+  { id: 1, short: "Mon", label: "Monday" },
+  { id: 2, short: "Tue", label: "Tuesday" },
+  { id: 3, short: "Wed", label: "Wednesday" },
+  { id: 4, short: "Thu", label: "Thursday" },
+  { id: 5, short: "Fri", label: "Friday" },
+  { id: 6, short: "Sat", label: "Saturday" },
+];
+
+function formatTime12(hh: number, mm: number): string {
+  const ampm = hh >= 12 ? "PM" : "AM";
+  const h = hh % 12 || 12;
+  return `${h}:${mm.toString().padStart(2, "0")} ${ampm}`;
+}
+
+function parseScheduledTime(t?: string | null): { hour: number; minute: number } {
+  if (!t || !/^\d{2}:\d{2}$/.test(t)) return { hour: 8, minute: 0 };
+  const [h, m] = t.split(":").map(Number);
+  return { hour: h, minute: m };
+}
+
+function parseDaysOfWeek(d?: string | null): number[] {
+  if (!d) return [1, 2, 3, 4, 5];
+  return d.split(",").map(Number).filter((n) => !isNaN(n));
+}
+
+function formatFrequencyLabel(freq?: string | null, days?: string | null): string {
+  if (!freq || freq === "daily") return "Every day";
+  if (freq === "once") return "One time";
+  if (freq === "weekly") {
+    const dayNums = parseDaysOfWeek(days);
+    if (dayNums.length === 7) return "Every day";
+    if (dayNums.length === 0) return "No days selected";
+    return dayNums.map((d) => DAYS[d]?.short || "").join(", ");
+  }
+  return freq;
+}
 
 export default function RemindersScreen() {
   const { theme } = useTheme();
@@ -71,10 +113,18 @@ export default function RemindersScreen() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [saving, setSaving] = useState(false);
   const [removingReminder, setRemovingReminder] = useState<Reminder | null>(null);
+  const [authError, setAuthError] = useState(false);
+
+  const [schedHour, setSchedHour] = useState(8);
+  const [schedMinute, setSchedMinute] = useState(0);
+  const [schedFrequency, setSchedFrequency] = useState<"daily" | "weekly" | "once">("daily");
+  const [schedDays, setSchedDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [scheduleReminder, setScheduleReminder] = useState<Reminder | null>(null);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   const activeCount = myReminders.filter((r) => r.is_active).length;
-
-  const [authError, setAuthError] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -83,9 +133,7 @@ export default function RemindersScreen() {
 
       const presetsPromise = remindersApi.getPresets().catch(() => null);
       const remindersPromise = remindersApi.getAll(user?.token).catch((err: any) => {
-        if (err?.status === 401) {
-          setAuthError(true);
-        }
+        if (err?.status === 401) setAuthError(true);
         return null;
       });
 
@@ -95,7 +143,9 @@ export default function RemindersScreen() {
       setPresets(loadedPresets?.length ? loadedPresets : FALLBACK_PRESETS);
       setMyReminders(remindersRes?.reminders || []);
     } catch {
-      Alert.alert("Error", "Could not load reminders. Please try again.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", "Could not load reminders. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,14 +156,18 @@ export default function RemindersScreen() {
   }, [loadData]);
 
   const isPresetAdded = (key: string) => myReminders.some((r) => r.reminder_key === key);
-  const getReminder = (key: string) => myReminders.find((r) => r.reminder_key === key);
 
   async function addPreset(preset: Preset) {
+    if (schedFrequency === "weekly" && schedDays.length === 0) {
+      if (Platform.OS !== "web") {
+        Alert.alert("Missing Days", "Please select at least one day for weekly reminders.");
+      }
+      return;
+    }
     if (activeCount >= MAX_ACTIVE) {
-      Alert.alert(
-        "Limit Reached",
-        `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off before adding another.`
-      );
+      if (Platform.OS !== "web") {
+        Alert.alert("Limit Reached", `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off before adding another.`);
+      }
       return;
     }
 
@@ -125,6 +179,9 @@ export default function RemindersScreen() {
           label: preset.label,
           prompt: preset.prompt,
           icon: preset.icon,
+          scheduled_time: `${schedHour.toString().padStart(2, "0")}:${schedMinute.toString().padStart(2, "0")}`,
+          frequency: schedFrequency,
+          days_of_week: schedFrequency === "weekly" ? schedDays.join(",") : undefined,
         },
         user?.token
       );
@@ -141,7 +198,9 @@ export default function RemindersScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not add reminder.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", err?.data?.message || "Could not add reminder.");
+      }
     } finally {
       setSaving(false);
     }
@@ -149,12 +208,10 @@ export default function RemindersScreen() {
 
   async function toggleReminder(reminder: Reminder) {
     const newActive = !reminder.is_active;
-
     if (newActive && activeCount >= MAX_ACTIVE) {
-      Alert.alert(
-        "Limit Reached",
-        `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off first.`
-      );
+      if (Platform.OS !== "web") {
+        Alert.alert("Limit Reached", `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off first.`);
+      }
       return;
     }
 
@@ -162,13 +219,13 @@ export default function RemindersScreen() {
       setToggling(reminder.id);
       const res = await remindersApi.toggle(reminder.id, newActive, user?.token);
       if (res.reminder) {
-        setMyReminders((prev) =>
-          prev.map((r) => (r.id === reminder.id ? res.reminder : r))
-        );
+        setMyReminders((prev) => prev.map((r) => (r.id === reminder.id ? res.reminder : r)));
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not toggle reminder.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", err?.data?.message || "Could not toggle reminder.");
+      }
     } finally {
       setToggling(null);
     }
@@ -185,28 +242,82 @@ export default function RemindersScreen() {
       setMyReminders((prev) => prev.filter((r) => r.id !== removingReminder.id));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {
-      Alert.alert("Error", "Could not remove reminder.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", "Could not remove reminder.");
+      }
     }
     setRemovingReminder(null);
   }
 
+  function openScheduleModal(reminder: Reminder) {
+    const { hour, minute } = parseScheduledTime(reminder.scheduled_time);
+    setSchedHour(hour);
+    setSchedMinute(minute);
+    setSchedFrequency((reminder.frequency as any) || "daily");
+    setSchedDays(parseDaysOfWeek(reminder.days_of_week));
+    setScheduleReminder(reminder);
+  }
+
+  async function saveSchedule() {
+    if (!scheduleReminder) return;
+    if (schedFrequency === "weekly" && schedDays.length === 0) {
+      if (Platform.OS !== "web") {
+        Alert.alert("Missing Days", "Please select at least one day of the week.");
+      }
+      return;
+    }
+    try {
+      setSavingSchedule(true);
+      const timeStr = `${schedHour.toString().padStart(2, "0")}:${schedMinute.toString().padStart(2, "0")}`;
+      const res = await remindersApi.updateSchedule(
+        scheduleReminder.id,
+        {
+          scheduled_time: timeStr,
+          frequency: schedFrequency,
+          days_of_week: schedFrequency === "weekly" ? schedDays.join(",") : undefined,
+        },
+        user?.token
+      );
+      if (res.reminder) {
+        setMyReminders((prev) => prev.map((r) => (r.id === scheduleReminder.id ? res.reminder : r)));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setScheduleReminder(null);
+    } catch (err: any) {
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", err?.data?.message || "Could not update schedule.");
+      }
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  function resetScheduleFields() {
+    setSchedHour(8);
+    setSchedMinute(0);
+    setSchedFrequency("daily");
+    setSchedDays([1, 2, 3, 4, 5]);
+  }
+
   async function addCustom() {
     if (!customLabel.trim() || !customPrompt.trim()) {
-      Alert.alert("Missing Info", "Please enter both a name and a reminder message.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Missing Info", "Please enter both a name and a reminder message.");
+      }
       return;
     }
 
     if (activeCount >= MAX_ACTIVE) {
-      Alert.alert(
-        "Limit Reached",
-        `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off first.`
-      );
+      if (Platform.OS !== "web") {
+        Alert.alert("Limit Reached", `You can have up to ${MAX_ACTIVE} active reminders. Please turn one off first.`);
+      }
       return;
     }
 
     try {
       setSaving(true);
       const key = `custom_${Date.now()}`;
+      const timeStr = `${schedHour.toString().padStart(2, "0")}:${schedMinute.toString().padStart(2, "0")}`;
       const res = await remindersApi.add(
         {
           reminder_key: key,
@@ -214,6 +325,9 @@ export default function RemindersScreen() {
           prompt: customPrompt.trim(),
           icon: "create-outline",
           is_custom: true,
+          scheduled_time: timeStr,
+          frequency: schedFrequency,
+          days_of_week: schedFrequency === "weekly" ? schedDays.join(",") : undefined,
         },
         user?.token
       );
@@ -221,14 +335,137 @@ export default function RemindersScreen() {
         setMyReminders((prev) => [...prev, res.reminder]);
         setCustomLabel("");
         setCustomPrompt("");
+        resetScheduleFields();
         setShowCustomModal(false);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not add custom reminder.");
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", err?.data?.message || "Could not add custom reminder.");
+      }
     } finally {
       setSaving(false);
     }
+  }
+
+  function toggleDay(d: number) {
+    setSchedDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()
+    );
+  }
+
+  function renderScheduleFields() {
+    const accent = theme.accent || "#2563EB";
+    return (
+      <View>
+        <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm, marginTop: 12 }]}>
+          Time
+        </Text>
+        <Pressable
+          onPress={() => setShowTimePicker(!showTimePicker)}
+          style={[styles.timePickerBtn, { backgroundColor: theme.inputBackground, borderColor: theme.cardBorder }]}
+        >
+          <Ionicons name="time-outline" size={22} color={accent} />
+          <Text style={[styles.timePickerText, { color: theme.text, fontSize: ts.lg }]}>
+            {formatTime12(schedHour, schedMinute)}
+          </Text>
+          <Ionicons name={showTimePicker ? "chevron-up" : "chevron-down"} size={20} color={theme.textSecondary} />
+        </Pressable>
+
+        {showTimePicker && (
+          <View style={[styles.timeGrid, { backgroundColor: theme.inputBackground, borderColor: theme.cardBorder }]}>
+            <Text style={[styles.timeGridLabel, { color: theme.textSecondary, fontSize: ts.xs }]}>Hour</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeScroll}>
+              {HOURS.map((h) => (
+                <Pressable
+                  key={h}
+                  onPress={() => setSchedHour(h)}
+                  style={[
+                    styles.timePill,
+                    { backgroundColor: schedHour === h ? accent : "transparent", borderColor: schedHour === h ? accent : theme.cardBorder },
+                  ]}
+                >
+                  <Text style={[styles.timePillText, { color: schedHour === h ? "#FFF" : theme.text, fontSize: ts.sm }]}>
+                    {h % 12 || 12}{h < 12 ? "a" : "p"}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={[styles.timeGridLabel, { color: theme.textSecondary, fontSize: ts.xs, marginTop: 8 }]}>Minute</Text>
+            <View style={styles.minuteRow}>
+              {MINUTES.map((m) => (
+                <Pressable
+                  key={m}
+                  onPress={() => setSchedMinute(m)}
+                  style={[
+                    styles.minutePill,
+                    { backgroundColor: schedMinute === m ? accent : "transparent", borderColor: schedMinute === m ? accent : theme.cardBorder },
+                  ]}
+                >
+                  <Text style={[styles.timePillText, { color: schedMinute === m ? "#FFF" : theme.text, fontSize: ts.sm }]}>
+                    :{m.toString().padStart(2, "0")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm, marginTop: 14 }]}>
+          How often?
+        </Text>
+        <View style={styles.freqRow}>
+          {([
+            { id: "daily" as const, label: "Every Day", icon: "sunny-outline" as const },
+            { id: "weekly" as const, label: "Specific Days", icon: "calendar-outline" as const },
+            { id: "once" as const, label: "One Time", icon: "flag-outline" as const },
+          ]).map((opt) => (
+            <Pressable
+              key={opt.id}
+              onPress={() => setSchedFrequency(opt.id)}
+              style={[
+                styles.freqPill,
+                {
+                  backgroundColor: schedFrequency === opt.id ? accent + "18" : "transparent",
+                  borderColor: schedFrequency === opt.id ? accent : theme.cardBorder,
+                },
+              ]}
+            >
+              <Ionicons
+                name={opt.icon}
+                size={16}
+                color={schedFrequency === opt.id ? accent : theme.textSecondary}
+              />
+              <Text style={[styles.freqPillText, { color: schedFrequency === opt.id ? accent : theme.text, fontSize: ts.xs }]}>
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {schedFrequency === "weekly" && (
+          <View style={styles.daysRow}>
+            {DAYS.map((day) => (
+              <Pressable
+                key={day.id}
+                onPress={() => toggleDay(day.id)}
+                style={[
+                  styles.dayBtn,
+                  {
+                    backgroundColor: schedDays.includes(day.id) ? accent : "transparent",
+                    borderColor: schedDays.includes(day.id) ? accent : theme.cardBorder,
+                  },
+                ]}
+              >
+                <Text style={[styles.dayBtnText, { color: schedDays.includes(day.id) ? "#FFF" : theme.text, fontSize: ts.sm }]}>
+                  {day.short}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+    );
   }
 
   if (loading) {
@@ -243,6 +480,8 @@ export default function RemindersScreen() {
     );
   }
 
+  const accent = theme.accent || "#2563EB";
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <PageHeader screenTitle="Daily Reminders" />
@@ -255,13 +494,13 @@ export default function RemindersScreen() {
       >
         <View style={[styles.infoCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
           <View style={styles.infoCardHeader}>
-            <View style={[styles.infoIconBox, { backgroundColor: (theme.accent || "#2563EB") + "20" }]}>
-              <Ionicons name="notifications" size={22} color={theme.accent || "#2563EB"} />
+            <View style={[styles.infoIconBox, { backgroundColor: accent + "20" }]}>
+              <Ionicons name="notifications" size={22} color={accent} />
             </View>
             <View style={styles.infoTextBox}>
               <Text style={[styles.infoTitle, { color: theme.text, fontSize: ts.lg }]}>Daily Reminders</Text>
               <Text style={[styles.infoSubtitle, { color: theme.textSecondary, fontSize: ts.sm }]}>
-                Choose up to {MAX_ACTIVE} reminders. Your AI assistant will check in with you each day.
+                Choose up to {MAX_ACTIVE} reminders. Set a time and your AI assistant will check in with you.
               </Text>
             </View>
           </View>
@@ -284,49 +523,72 @@ export default function RemindersScreen() {
         {myReminders.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text, fontSize: ts.base }]}>My Reminders</Text>
-            {myReminders.map((reminder) => (
-              <View
-                key={reminder.id}
-                style={[
-                  styles.reminderCard,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: reminder.is_active ? (theme.accent || "#2563EB") + "40" : theme.cardBorder,
-                  },
-                ]}
-              >
-                <View style={styles.reminderCardTop}>
-                  <View style={[styles.reminderIcon, { backgroundColor: reminder.is_active ? (theme.accent || "#2563EB") + "20" : theme.inputBackground }]}>
-                    <Ionicons
-                      name={reminder.icon as any}
-                      size={20}
-                      color={reminder.is_active ? (theme.accent || "#2563EB") : theme.textTertiary}
+            {myReminders.map((reminder) => {
+              const { hour, minute } = parseScheduledTime(reminder.scheduled_time);
+              const hasSchedule = !!reminder.scheduled_time;
+              return (
+                <View
+                  key={reminder.id}
+                  style={[
+                    styles.reminderCard,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: reminder.is_active ? accent + "40" : theme.cardBorder,
+                    },
+                  ]}
+                >
+                  <View style={styles.reminderCardTop}>
+                    <View style={[styles.reminderIcon, { backgroundColor: reminder.is_active ? accent + "20" : theme.inputBackground }]}>
+                      <Ionicons
+                        name={reminder.icon as any}
+                        size={20}
+                        color={reminder.is_active ? accent : theme.textTertiary}
+                      />
+                    </View>
+                    <View style={styles.reminderInfo}>
+                      <Text style={[styles.reminderLabel, { color: theme.text, fontSize: ts.base }]}>{reminder.label}</Text>
+                      <Text style={[styles.reminderPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={2}>
+                        {reminder.prompt.replace("{name}", user?.first_name || "there")}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={reminder.is_active}
+                      onValueChange={() => toggleReminder(reminder)}
+                      disabled={toggling === reminder.id}
+                      trackColor={{ false: theme.inputBackground, true: "#34D399" }}
+                      thumbColor="#FFFFFF"
                     />
                   </View>
-                  <View style={styles.reminderInfo}>
-                    <Text style={[styles.reminderLabel, { color: theme.text, fontSize: ts.base }]}>{reminder.label}</Text>
-                    <Text style={[styles.reminderPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={2}>
-                      {reminder.prompt.replace("{name}", user?.first_name || "there")}
-                    </Text>
+
+                  <View style={styles.scheduleRow}>
+                    <Pressable
+                      onPress={() => openScheduleModal(reminder)}
+                      style={[styles.scheduleBtn, { backgroundColor: accent + "10", borderColor: accent + "30" }]}
+                    >
+                      <Ionicons name="time-outline" size={14} color={accent} />
+                      <Text style={[styles.scheduleBtnText, { color: accent, fontSize: ts.xs }]}>
+                        {hasSchedule ? formatTime12(hour, minute) : "Set Time"}
+                      </Text>
+                    </Pressable>
+                    {hasSchedule && (
+                      <View style={[styles.freqBadge, { backgroundColor: theme.inputBackground }]}>
+                        <Ionicons name="repeat-outline" size={12} color={theme.textSecondary} />
+                        <Text style={[styles.freqBadgeText, { color: theme.textSecondary, fontSize: ts.xs }]}>
+                          {formatFrequencyLabel(reminder.frequency, reminder.days_of_week)}
+                        </Text>
+                      </View>
+                    )}
+                    <Pressable
+                      onPress={() => removeReminder(reminder)}
+                      style={[styles.removeBtn, { borderColor: theme.cardBorder }]}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                      <Text style={[styles.removeBtnText, { fontSize: ts.xs }]}>Remove</Text>
+                    </Pressable>
                   </View>
-                  <Switch
-                    value={reminder.is_active}
-                    onValueChange={() => toggleReminder(reminder)}
-                    disabled={toggling === reminder.id}
-                    trackColor={{ false: theme.inputBackground, true: "#34D399" }}
-                    thumbColor="#FFFFFF"
-                  />
                 </View>
-                <TouchableOpacity
-                  onPress={() => removeReminder(reminder)}
-                  activeOpacity={0.6}
-                  style={[styles.removeBtn, { borderColor: theme.cardBorder }]}
-                >
-                  <Ionicons name="trash-outline" size={14} color="#EF4444" />
-                  <Text style={[styles.removeBtnText, { fontSize: ts.xs }]}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -338,11 +600,10 @@ export default function RemindersScreen() {
           {presets
             .filter((p) => !isPresetAdded(p.key))
             .map((preset) => (
-              <TouchableOpacity
+              <Pressable
                 key={preset.key}
                 onPress={() => addPreset(preset)}
                 disabled={saving}
-                activeOpacity={0.7}
                 style={[
                   styles.presetCard,
                   {
@@ -351,8 +612,8 @@ export default function RemindersScreen() {
                   },
                 ]}
               >
-                <View style={[styles.presetIcon, { backgroundColor: (theme.accent || "#2563EB") + "15" }]}>
-                  <Ionicons name={preset.icon as any} size={22} color={theme.accent || "#2563EB"} />
+                <View style={[styles.presetIcon, { backgroundColor: accent + "15" }]}>
+                  <Ionicons name={preset.icon as any} size={22} color={accent} />
                 </View>
                 <View style={styles.presetInfo}>
                   <Text style={[styles.presetLabel, { color: theme.text, fontSize: ts.base }]}>{preset.label}</Text>
@@ -360,10 +621,10 @@ export default function RemindersScreen() {
                     "{preset.prompt.replace("{name}", user?.first_name || "there")}"
                   </Text>
                 </View>
-                <View style={[styles.addBadge, { backgroundColor: (theme.accent || "#2563EB") + "15" }]}>
-                  <Ionicons name="add" size={18} color={theme.accent || "#2563EB"} />
+                <View style={[styles.addBadge, { backgroundColor: accent + "15" }]}>
+                  <Ionicons name="add" size={18} color={accent} />
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             ))}
 
           {presets.filter((p) => !isPresetAdded(p.key)).length === 0 && myReminders.length > 0 && (
@@ -376,9 +637,11 @@ export default function RemindersScreen() {
           )}
         </View>
 
-        <TouchableOpacity
-          onPress={() => setShowCustomModal(true)}
-          activeOpacity={0.7}
+        <Pressable
+          onPress={() => {
+            resetScheduleFields();
+            setShowCustomModal(true);
+          }}
           style={[
             styles.customButton,
             {
@@ -387,66 +650,105 @@ export default function RemindersScreen() {
             },
           ]}
         >
-          <Ionicons name="create-outline" size={20} color={theme.accent || "#2563EB"} />
-          <Text style={[styles.customButtonText, { color: theme.accent || "#2563EB", fontSize: ts.base }]}>
+          <Ionicons name="create-outline" size={20} color={accent} />
+          <Text style={[styles.customButtonText, { color: accent, fontSize: ts.base }]}>
             Create Custom Reminder
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
 
       <Modal visible={showCustomModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text, fontSize: ts.lg }]}>Custom Reminder</Text>
-              <TouchableOpacity onPress={() => setShowCustomModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.5}>
-                <Ionicons name="close" size={24} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text, fontSize: ts.lg }]}>Custom Reminder</Text>
+                <Pressable onPress={() => setShowCustomModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                </Pressable>
+              </View>
 
-            <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>Reminder Name</Text>
-            <TextInput
-              style={[styles.modalInput, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
-              value={customLabel}
-              onChangeText={setCustomLabel}
-              placeholder="e.g., Evening Prayer"
-              placeholderTextColor={theme.placeholder}
-              maxLength={50}
-            />
+              <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>Reminder Name</Text>
+              <TextInput
+                style={[styles.modalInput, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
+                value={customLabel}
+                onChangeText={setCustomLabel}
+                placeholder="e.g., Evening Prayer"
+                placeholderTextColor={theme.placeholder}
+                maxLength={50}
+              />
 
-            <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>
-              What should the assistant say?
-            </Text>
-            <TextInput
-              style={[styles.modalTextArea, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
-              value={customPrompt}
-              onChangeText={setCustomPrompt}
-              placeholder="e.g., Have you said your evening prayer today?"
-              placeholderTextColor={theme.placeholder}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              maxLength={200}
-            />
-            <Text style={[styles.charCount, { color: theme.textTertiary, fontSize: ts.xs }]}>
-              {customPrompt.length}/200
-            </Text>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary, fontSize: ts.sm }]}>
+                What should the assistant say?
+              </Text>
+              <TextInput
+                style={[styles.modalTextArea, { color: theme.text, backgroundColor: theme.inputBackground, borderColor: theme.cardBorder, fontSize: ts.base }]}
+                value={customPrompt}
+                onChangeText={setCustomPrompt}
+                placeholder="e.g., Have you said your evening prayer today?"
+                placeholderTextColor={theme.placeholder}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+                maxLength={200}
+              />
+              <Text style={[styles.charCount, { color: theme.textTertiary, fontSize: ts.xs }]}>
+                {customPrompt.length}/200
+              </Text>
 
-            <TouchableOpacity
-              onPress={addCustom}
-              disabled={saving || !customLabel.trim() || !customPrompt.trim()}
-              activeOpacity={0.7}
-              style={[
-                styles.modalSaveButton,
-                (saving || !customLabel.trim() || !customPrompt.trim()) && styles.modalSaveDisabled,
-              ]}
-            >
-              {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={[styles.modalSaveText, { fontSize: ts.base }]}>Add Reminder</Text>
-              )}
-            </TouchableOpacity>
+              {renderScheduleFields()}
+
+              <Pressable
+                onPress={addCustom}
+                disabled={saving || !customLabel.trim() || !customPrompt.trim()}
+                style={[
+                  styles.modalSaveButton,
+                  (saving || !customLabel.trim() || !customPrompt.trim()) && styles.modalSaveDisabled,
+                ]}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.modalSaveText, { fontSize: ts.base }]}>Add Reminder</Text>
+                )}
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={scheduleReminder !== null} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalTitle, { color: theme.text, fontSize: ts.lg }]}>Set Schedule</Text>
+                  {scheduleReminder && (
+                    <Text style={[{ color: theme.textSecondary, fontSize: ts.sm, fontFamily: "Inter_400Regular", marginTop: 2 }]}>
+                      {scheduleReminder.label}
+                    </Text>
+                  )}
+                </View>
+                <Pressable onPress={() => setScheduleReminder(null)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                </Pressable>
+              </View>
+
+              {renderScheduleFields()}
+
+              <Pressable
+                onPress={saveSchedule}
+                disabled={savingSchedule}
+                style={[styles.modalSaveButton, savingSchedule && styles.modalSaveDisabled, { marginTop: 20 }]}
+              >
+                {savingSchedule ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.modalSaveText, { fontSize: ts.base }]}>Save Schedule</Text>
+                )}
+              </Pressable>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -542,31 +844,44 @@ const styles = StyleSheet.create({
   reminderInfo: { flex: 1 },
   reminderLabel: { fontFamily: "Inter_600SemiBold", marginBottom: 2 },
   reminderPrompt: { fontFamily: "Inter_400Regular", lineHeight: 18, fontStyle: "italic" },
+
+  scheduleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+    flexWrap: "wrap",
+  },
+  scheduleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  scheduleBtnText: { fontFamily: "Inter_600SemiBold" },
+  freqBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  freqBadgeText: { fontFamily: "Inter_400Regular" },
   removeBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    alignSelf: "flex-end",
-    marginTop: 8,
+    marginLeft: "auto",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
   },
   removeBtnText: { fontFamily: "Inter_500Medium", color: "#EF4444" },
-  fullModalContainer: {
-    flex: 1,
-  },
-  fullModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  closeButton: {
-    padding: 4,
-  },
 
   presetCard: {
     flexDirection: "row",
@@ -628,11 +943,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     paddingBottom: 40,
+    maxHeight: "85%",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 20,
   },
   modalTitle: { fontFamily: "Inter_700Bold" },
@@ -658,7 +974,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "right",
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   modalSaveButton: {
     backgroundColor: "#2563EB",
@@ -666,7 +982,74 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 16,
   },
   modalSaveDisabled: { opacity: 0.5 },
   modalSaveText: { fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+
+  timePickerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  timePickerText: { fontFamily: "Inter_700Bold", flex: 1 },
+  timeGrid: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  timeGridLabel: { fontFamily: "Inter_500Medium", marginBottom: 6 },
+  timeScroll: { marginBottom: 4 },
+  timePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  timePillText: { fontFamily: "Inter_600SemiBold" },
+  minuteRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  minutePill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  freqRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  freqPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  freqPillText: { fontFamily: "Inter_600SemiBold" },
+  daysRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 10,
+  },
+  dayBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  dayBtnText: { fontFamily: "Inter_600SemiBold" },
 });

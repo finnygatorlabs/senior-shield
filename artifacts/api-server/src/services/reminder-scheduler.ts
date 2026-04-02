@@ -131,6 +131,14 @@ export async function runReminderScheduler(): Promise<SchedulerResult> {
             }
           }
 
+          if (reminder.frequency === "once") {
+            await db
+              .update(dailyRemindersTable)
+              .set({ is_active: false, updated_at: new Date() })
+              .where(eq(dailyRemindersTable.id, reminder.id));
+            console.log(`[Scheduler] One-time reminder ${reminder.id} deactivated after firing`);
+          }
+
           const primaryFamily = await db
             .select()
             .from(familyRelationshipsTable)

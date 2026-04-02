@@ -25,6 +25,7 @@ export function isReminderDue(reminder: ReminderForCheck, userTimezone: string):
 
     const freq = reminder.frequency || "daily";
     if (freq === "daily") return true;
+    if (freq === "once") return true;
 
     if (freq === "weekly") {
       const dayOfWeek = userTime.getDay();

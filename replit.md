@@ -20,7 +20,7 @@ The project is structured as a pnpm monorepo using Node.js 24 and TypeScript 5.9
 - Developed with Expo (React Native) and Expo Router v6, targeting iOS with an Airbnb-inspired design.
 - UI/UX features a clean blue color scheme (`#2563EB`) and the Inter font.
 - Core screens include authentication (hero banner signup with seniors photo, no user type selection — all users are seniors), onboarding, main tabs (home, scam check, reminders, family, history, settings), subscription management, and an emergency screen.
-- Daily Reminders: Users can select or create custom reminders, which the AI assistant uses for personalized greetings.
+- Daily Reminders: Users can select preset or create custom reminders with full scheduling: time picker (HH:MM), frequency (daily/weekly/one-time), day-of-week selector. Each reminder card shows its scheduled time and frequency badge, with a "Set Time" button to open the schedule editor. The scheduler cron job handles `once` frequency by auto-deactivating the reminder after it fires. Backend validates time ranges (00-23, 00-59), frequency enum, and requires days_of_week for weekly. API endpoint: `PUT /reminders/:id/schedule`.
 - Premium Soft-Gate System: Limits free-tier access to premium features (e.g., scam scans, number of family members) with clear upgrade paths and UI indicators.
 - Daily Quotes & Facts: The home screen alternates between inspirational quotes and "Fact of the Day" entries from curated collections. Facts display with a gold accent and label. Can be disabled by the user.
 - Authentication: Uses JWT tokens with `AsyncStorage`, `AuthContext`, and supports social sign-in (Google, Apple). Global session expiry detection is implemented.

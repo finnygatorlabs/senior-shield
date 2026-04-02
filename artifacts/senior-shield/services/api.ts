@@ -285,12 +285,16 @@ export const remindersApi = {
     return request("/reminders/active", { token });
   },
 
-  add(data: { reminder_key: string; label: string; prompt: string; icon?: string; is_custom?: boolean; metadata?: any }, token?: string) {
+  add(data: { reminder_key: string; label: string; prompt: string; icon?: string; is_custom?: boolean; metadata?: any; scheduled_time?: string; frequency?: string; days_of_week?: string }, token?: string) {
     return request("/reminders", { method: "POST", body: data, token });
   },
 
   updateMetadata(id: string, metadata: any, token?: string) {
     return request(`/reminders/${id}/metadata`, { method: "PUT", body: { metadata }, token });
+  },
+
+  updateSchedule(id: string, data: { scheduled_time?: string; frequency?: string; days_of_week?: string }, token?: string) {
+    return request(`/reminders/${id}/schedule`, { method: "PUT", body: data, token });
   },
 
   toggle(id: string, is_active: boolean, token?: string) {
