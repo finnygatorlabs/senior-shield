@@ -6,7 +6,7 @@ import { requireAuth, AuthRequest } from "../lib/auth.js";
 
 const router: IRouter = Router();
 
-const MAX_ACTIVE_REMINDERS = 3;
+const MAX_ACTIVE_REMINDERS = 5;
 
 const PRESET_REMINDERS = [
   {

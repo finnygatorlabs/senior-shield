@@ -43,7 +43,7 @@ interface Reminder {
   days_of_week?: string | null;
 }
 
-const MAX_ACTIVE = 3;
+const MAX_ACTIVE = 5;
 
 const FALLBACK_PRESETS: Preset[] = [
   { key: "medication", label: "Medication Reminder", prompt: "Good morning {name}, have you taken your medication today?", icon: "medkit-outline" },
@@ -628,7 +628,7 @@ export default function RemindersScreen() {
                     </View>
                     <View style={styles.reminderInfo}>
                       <Text style={[styles.reminderLabel, { color: theme.text, fontSize: ts.base }]}>{reminder.label}</Text>
-                      <Text style={[styles.reminderPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={2}>
+                      <Text style={[styles.reminderPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={3}>
                         {reminder.prompt.replace("{name}", user?.first_name || "there")}
                       </Text>
                     </View>
@@ -698,7 +698,7 @@ export default function RemindersScreen() {
                 </View>
                 <View style={styles.presetInfo}>
                   <Text style={[styles.presetLabel, { color: theme.text, fontSize: ts.base }]}>{preset.label}</Text>
-                  <Text style={[styles.presetPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={2}>
+                  <Text style={[styles.presetPrompt, { color: theme.textSecondary, fontSize: ts.xs }]} numberOfLines={3}>
                     "{preset.prompt.replace("{name}", user?.first_name || "there")}"
                   </Text>
                 </View>
