@@ -6,7 +6,7 @@ import { requireAuth, AuthRequest } from "../lib/auth.js";
 
 const router: IRouter = Router();
 
-const RETENTION_DAYS = 30;
+const RETENTION_DAYS = 7;
 
 function expiresAt(): Date {
   const d = new Date();
