@@ -54,3 +54,4 @@ channel = "stable-25_05"
 [userenv.shared]
 EXPO_PUBLIC_GOOGLE_CLIENT_ID = "1015174744161-aod0e8nofl3ur0b76uaj1c8uvtidn0rr.apps.googleusercontent.com"
 SCHEDULER_SECRET = "V1V3eBgK_Di3Vd6ZfhCECJQCsAQ8HnuJ8Cp9Kqqr17M"
+EXPO_PUBLIC_PROJECT_ID = "seniorshield-1eca9"
