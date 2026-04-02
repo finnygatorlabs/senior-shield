@@ -29,6 +29,31 @@ router.post("/reminders", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/run/:secret", async (req: Request, res: Response) => {
+  try {
+    if (!process.env.SCHEDULER_SECRET || req.params.secret !== process.env.SCHEDULER_SECRET) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const result = await runReminderScheduler();
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      processed: result.processed,
+      sent: result.sent,
+      errors: result.errors,
+    });
+  } catch (error) {
+    console.error("[Scheduler Route] Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
 router.get("/health", (_req: Request, res: Response) => {
   res.json({
     status: "healthy",
