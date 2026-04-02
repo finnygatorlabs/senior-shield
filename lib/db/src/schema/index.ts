@@ -11,6 +11,7 @@ import {
   jsonb,
   unique,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -517,3 +518,26 @@ export const reminderHistoryTable = pgTable(
 );
 
 export type ReminderHistory = typeof reminderHistoryTable.$inferSelect;
+
+export const pushTokensTable = pgTable(
+  "push_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id").references(() => usersTable.id, { onDelete: "cascade" }).notNull(),
+    firebase_token: varchar("firebase_token", { length: 500 }).notNull(),
+    expo_push_token: varchar("expo_push_token", { length: 500 }),
+    platform: varchar("platform", { length: 50 }).notNull(),
+    device_name: varchar("device_name", { length: 255 }),
+    is_active: boolean("is_active").default(true),
+    last_used_at: timestamp("last_used_at"),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [
+    index("idx_push_tokens_user_id").on(t.user_id),
+    index("idx_push_tokens_firebase_token").on(t.firebase_token),
+    uniqueIndex("idx_push_tokens_user_firebase").on(t.user_id, t.firebase_token),
+  ]
+);
+
+export type PushToken = typeof pushTokensTable.$inferSelect;

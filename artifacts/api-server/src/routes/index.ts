@@ -20,6 +20,7 @@ import facilitiesRouter from "./facilities.js";
 import remindersRouter from "./reminders.js";
 import healthAwarenessRouter from "./healthAwareness.js";
 import schedulerRouter from "./scheduler.js";
+import pushTokensRouter from "./push-tokens.js";
 
 import { authLimiter, scamLimiter, voiceLimiter } from "../lib/rateLimit.js";
 
@@ -46,5 +47,6 @@ router.use("/facilities", facilitiesRouter);
 router.use("/reminders", remindersRouter);
 router.use("/health-awareness", healthAwarenessRouter);
 router.use("/scheduler", schedulerRouter);
+router.use("/push-tokens", pushTokensRouter);
 
 export default router;

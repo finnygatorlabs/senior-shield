@@ -4,11 +4,13 @@ import {
   reminderHistoryTable,
   familyRelationshipsTable,
   usersTable,
+  pushTokensTable,
 } from "@workspace/db";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { toZonedTime } from "date-fns-tz";
 import { sendReminderNotificationEmail } from "./reminder-email-service.js";
-import { isReminderDue } from "./reminder-utils.js";
+import { sendReminderPushNotification } from "./firebase-push-service.js";
+import { isReminderDue, formatReminderTime } from "./reminder-utils.js";
 
 interface SchedulerResult {
   processed: number;
@@ -102,6 +104,31 @@ export async function runReminderScheduler(): Promise<SchedulerResult> {
           if (!historyEntry.length) {
             result.errors.push(`Failed to create history for reminder ${reminder.id}`);
             continue;
+          }
+
+          const userTokens = await db
+            .select()
+            .from(pushTokensTable)
+            .where(
+              and(
+                eq(pushTokensTable.user_id, reminder.user_id),
+                eq(pushTokensTable.is_active, true)
+              )
+            );
+
+          if (userTokens.length > 0) {
+            const tokens = userTokens.map((t) => t.firebase_token);
+            const formattedTime = formatReminderTime(reminder.scheduled_time!);
+            const pushResult = await sendReminderPushNotification(
+              tokens,
+              reminder.label,
+              formattedTime,
+              reminder.id
+            );
+            if (pushResult.success > 0) {
+              result.sent++;
+              console.log(`[Scheduler] Sent push notification for reminder ${reminder.id} to ${pushResult.success} device(s)`);
+            }
           }
 
           const primaryFamily = await db

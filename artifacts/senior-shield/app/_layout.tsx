@@ -18,6 +18,7 @@ import { setBaseUrl } from "@workspace/api-client-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { PreferencesProvider } from "@/context/PreferencesContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,6 +33,7 @@ setBaseUrl(
 function RootLayoutNav() {
   const { user, isLoading } = useAuth();
   const hasInitialRouted = useRef(false);
+  usePushNotifications(user?.id ?? null);
 
   useEffect(() => {
     if (isLoading) return;

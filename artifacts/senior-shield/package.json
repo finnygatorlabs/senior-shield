@@ -62,6 +62,7 @@
     "expo-device": "^55.0.10",
     "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.21",
+    "expo-notifications": "^55.0.14",
     "expo-speech": "^55.0.9"
   }
 }

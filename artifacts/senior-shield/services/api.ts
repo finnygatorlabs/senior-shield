@@ -429,4 +429,17 @@ export const healthAwarenessApi = {
   },
 };
 
+export async function registerPushToken(data: {
+  firebaseToken: string;
+  expoPushToken: string | null;
+  platform: string;
+  deviceName?: string;
+}) {
+  return request("/push-tokens/register", { method: "POST", body: data });
+}
+
+export async function unregisterPushToken(firebaseToken: string) {
+  return request("/push-tokens/unregister", { method: "DELETE", body: { firebaseToken } });
+}
+
 export { API_BASE, getToken, request };
