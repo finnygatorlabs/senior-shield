@@ -29,6 +29,7 @@ RUN npm install -g pnpm
 # Copy only necessary files from builder
 COPY --from=builder /app/artifacts/api-server/dist ./dist
 COPY --from=builder /app/artifacts/api-server/package.json ./package.json
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile
