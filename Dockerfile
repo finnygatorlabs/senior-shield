@@ -32,7 +32,7 @@ COPY --from=builder /app/artifacts/api-server/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod --no-frozen-lockfile
 
 # Expose port (Railway will set PORT env var)
 EXPOSE 3000
