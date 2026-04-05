@@ -26,22 +26,19 @@ WORKDIR /app
 # Install pnpm for runtime
 RUN npm install -g pnpm
 
-# Copy built application
-COPY --from=builder /app/artifacts/api-server/dist ./dist
-
-# Copy entire api-server directory (including package.json) to preserve structure
-COPY --from=builder /app/artifacts/api-server ./
-
-# Copy workspace root files needed for dependency resolution
+# Copy entire workspace structure to runtime
 COPY --from=builder /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/package.json ./
-
-# Copy lib dependencies (needed by api-server)
 COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/artifacts/api-server ./artifacts/api-server
 
-# Install production dependencies using the workspace lockfile
+# Install production dependencies from workspace root
+# This will properly resolve workspace: references
 RUN pnpm install --prod --frozen-lockfile
+
+# Set working directory to api-server for runtime
+WORKDIR /app/artifacts/api-server
 
 # Expose port (Railway will set PORT env var)
 EXPOSE 3000
