@@ -1,31 +1,14 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
+  "name": "senior-shield",
+  "version": "1.0.0",
+  "main": "src/index.js",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "dev:learning": "ts-node --project src/tsconfig.json src/backend/index.ts"
-  },
-  "private": true,
-  "devDependencies": {
-    "prettier": "^3.8.1",
-    "typescript": "~5.9.3"
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
   },
   "dependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "catalog:",
-    "@types/uuid": "^11.0.0",
-    "adm-zip": "^0.5.16",
-    "axios": "^1.14.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "openai": "^6.33.0",
-    "ts-node": "^10.9.2",
-    "uuid": "^13.0.0"
+    "express": "^4.18.2",
+    "mysql2": "^3.9.0",
+    "dotenv": "^16.4.0"
   }
 }

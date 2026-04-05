@@ -1,11 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "pnpm"]
+nixPkgs = ["nodejs"]
 
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
-
-[phases.build]
-cmds = ["pnpm --filter @workspace/api-server build"]
+cmds = ["npm install"]
 
 [start]
-cmd = "pnpm --filter @workspace/api-server start"
+cmd = "npm start"
