@@ -1,14 +1,12 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "dockerfile"
+    "builder": "nixpacks",
+    "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build"
   },
   "deploy": {
-    "startCommand": "node --enable-source-maps ./dist/index.mjs",
+    "startCommand": "pnpm --filter @workspace/api-server start",
     "restartPolicyMaxRetries": 5,
     "restartPolicyWindowMs": 60000
-  },
-  "metadata": {
-    "updated": "2026-04-04T20:35:00Z"
   }
 }
